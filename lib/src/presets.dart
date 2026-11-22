@@ -1,4 +1,6 @@
 import 'abstract2.dart';
+import 'abstract3.dart';
+import 'race2.dart';
 import 'board_levels.dart';
 import 'chess.dart';
 import 'connect_games.dart';
@@ -227,6 +229,67 @@ class MasaPresets {
         opponentFor: (d) => Opponent(d <= 4 ? 1 : 2, 3000, _ladder[d - 1]),
         solverFor: (_) => const Opponent(3, 7000, 0),
         openingFor: (d) => d <= 3 ? 0 : 2,
+        humanSeatFor: (_) => 0,
+      );
+
+  static BoardGameRules fanorona(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (_) => const FanoronaRules(),
+        opponentFor: (d) => Opponent(const [1, 1, 2, 2, 2, 3, 3, 3, 4, 4][d - 1], 6000, _ladder[d - 1]),
+        solverFor: (_) => const Opponent(4, 12000, 0),
+        openingFor: (d) => 0,
+      );
+
+  static BoardGameRules marblePush(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (_) => const MarblePushRules(),
+        opponentFor: (d) => Opponent(d <= 4 ? 1 : 2, 4000, _ladder[d - 1]),
+        solverFor: (_) => const Opponent(2, 8000, 0),
+        openingFor: (d) => 0,
+      );
+
+  static BoardGameRules wallRace(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (d) => WallRaceRules(d <= 3 ? 7 : 9),
+        opponentFor: (d) => Opponent(d <= 3 ? 1 : 2, 2500, _ladder[d - 1]),
+        solverFor: (_) => const Opponent(2, 5000, 0),
+        openingFor: (d) => 0,
+        humanSeatFor: (_) => 0,
+      );
+
+  static BoardGameRules ur(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (_) => const UrRules(),
+        opponentFor: _noisy,
+        solverFor: (_) => const Opponent(2, 0, 0),
+        openingFor: (d) => 0,
+        humanSeatFor: (_) => 0,
+      );
+
+  static BoardGameRules senet(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (_) => const SenetRules(),
+        opponentFor: _noisy,
+        solverFor: (_) => const Opponent(2, 0, 0),
+        openingFor: (d) => 0,
+        humanSeatFor: (_) => 0,
+      );
+
+  static BoardGameRules yut(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (_) => const YutRules(),
+        opponentFor: _noisy,
+        solverFor: (_) => const Opponent(2, 0, 0),
+        openingFor: (d) => 0,
+        humanSeatFor: (_) => 0,
+      );
+
+  static BoardGameRules naval(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (d) => NavalRules(d <= 4 ? 8 : 10),
+        opponentFor: _noisy,
+        solverFor: (_) => const Opponent(2, 0, 0),
+        openingFor: (d) => 0,
         humanSeatFor: (_) => 0,
       );
 }

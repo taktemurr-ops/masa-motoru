@@ -2,6 +2,7 @@
 library;
 
 export 'src/abstract2.dart';
+export 'src/abstract3.dart';
 export 'src/board_ai.dart';
 export 'src/board_game.dart';
 export 'src/board_levels.dart';
@@ -17,6 +18,7 @@ export 'src/mancala.dart';
 export 'src/morris.dart';
 export 'src/presets.dart';
 export 'src/race_games.dart';
+export 'src/race2.dart';
 export 'src/tavla.dart';
 export 'src/reversi.dart';
 export 'src/skin_tavla.dart';
@@ -25,3 +27,4 @@ export 'src/skins_dice.dart';
 export 'src/skins2.dart';
 export 'src/skins3.dart';
 export 'src/skins4.dart';
+export 'src/skins5.dart';

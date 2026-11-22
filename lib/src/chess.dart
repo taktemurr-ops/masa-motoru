@@ -13,7 +13,7 @@ int pieceType(int v) => v < 0 ? 0 : v % 8;
 /// sayacı, [2] rok hakları (1 beyaz kısa, 2 beyaz uzun, 4 siyah kısa,
 /// 8 siyah uzun), [3] geçerken alma karesi + 1, [4..5] şah çekme sayısı
 /// (üç şah çeşidi), [6] Chess960 kale sütunları (kısa*8 + uzun).
-enum ChessVariant { standard, chess960, threeCheck, kingOfHill, horde, atomic, racingKings, antichess, gardner, losAlamos }
+enum ChessVariant { standard, chess960, threeCheck, kingOfHill, horde, atomic, racingKings, antichess, gardner, losAlamos, pawnRace }
 
 class ChessRules extends BoardRules<GridState> {
   final ChessVariant variant;
@@ -76,6 +76,16 @@ class ChessRules extends BoardRules<GridState> {
       s.cells[8 + c] = 8 + cP;
       s.cells[48 + c] = cP;
       s.cells[56 + c] = back[c];
+    }
+    if (variant == ChessVariant.pawnRace) {
+      // Piyon savaşı: yalnızca şahlar ve piyonlar; ilk terfi eden kazanır.
+      for (var c = 0; c < 8; c++) {
+        if (c != 4) {
+          s.cells[c] = -1;
+          s.cells[56 + c] = -1;
+        }
+      }
+      return s;
     }
     if (variant == ChessVariant.horde) {
       // Beyaz 36 piyonla siyah tam orduya karşı.
@@ -378,6 +388,11 @@ class ChessRules extends BoardRules<GridState> {
       case ChessVariant.horde:
         if (!s.cells.any((v) => pieceColor(v) == 0)) {
           s.vars[0] = 2;
+          return;
+        }
+      case ChessVariant.pawnRace:
+        if (s.cells.any((v) => pieceColor(v) == mover && pieceType(v) != cP && pieceType(v) != cK)) {
+          s.vars[0] = mover + 1;
           return;
         }
       case ChessVariant.antichess:

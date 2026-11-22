@@ -42,6 +42,15 @@ void main() {
     'surakarta': MasaPresets.surakarta('oyun-surakarta'),
     'tafl': MasaPresets.tafl('oyun-hnefatafl'),
     'havannah': MasaPresets.havannah('oyun-havannah'),
+    'fanorona': MasaPresets.fanorona('oyun-fanorona'),
+    'mermer': MasaPresets.marblePush('oyun-mermer-itme'),
+    'duvar': MasaPresets.wallRace('oyun-duvar-yarisi'),
+    'ur': MasaPresets.ur('oyun-ur'),
+    'senet': MasaPresets.senet('oyun-senet'),
+    'yut': MasaPresets.yut('oyun-yut'),
+    'amiral': MasaPresets.naval('oyun-amiral-batti'),
+    'narde': MasaPresets.tavla('x-narde', TavlaVariant.narde),
+    'piyon-savasi': MasaPresets.chess('x-piyon', ChessVariant.pawnRace),
     'dokuz-tas': MasaPresets.morris('oyun-dokuz-tas'),
     'go': MasaPresets.go('oyun-go'),
     'tavla': MasaPresets.tavla('oyun-tavla'),
@@ -185,6 +194,75 @@ void main() {
       r.apply(s, mv(-1, (z + 4) * 9 + x + 4));
     }
     expect(r.winner(s), 0);
+  });
+
+  void playOut(BoardRules r, int seed) {
+    final rnd = SeededRandom(seed);
+    final s = r.initial(rnd);
+    var n = 0;
+    while (!r.isOver(s) && n++ < 3000) {
+      if (r.needsChance(s)) {
+        r.applyChance(s, rnd);
+        continue;
+      }
+      final ms = r.moves(s);
+      r.apply(s, ms[rnd.nextInt(ms.length)]);
+    }
+    expect(r.isOver(s) || s.ply >= r.maxPly, isTrue, reason: r.id);
+  }
+
+  test('zarlı ve gizli oyunlar sonuna kadar oynanır', () {
+    for (final r in const <BoardRules>[UrRules(), SenetRules(), YutRules(), NavalRules(8), NavalRules(10), TavlaRules(TavlaVariant.narde)]) {
+      for (var seed = 1; seed <= 3; seed++) {
+        playOut(r, seed);
+      }
+    }
+  });
+
+  test('fanorona: başlangıçta yalnızca alım hamleleri', () {
+    const r = FanoronaRules();
+    final s = r.initial(SeededRandom(1));
+    final ms = r.moves(s);
+    expect(ms, isNotEmpty);
+    expect(ms.every((m) => mvExtra(m) > 0), isTrue);
+    playOut(r, 4);
+  });
+
+  test('mermer itme: 14 bilye, itme ve düşürme', () {
+    const r = MarblePushRules();
+    final s = r.initial(SeededRandom(1));
+    expect(s.cells.where((x) => x == 0).length, 14);
+    expect(s.cells.where((x) => x == 1).length, 14);
+    playOut(r, 2);
+  });
+
+  test('duvar yarışı: yol kapatan duvar konmaz', () {
+    const r = WallRaceRules(9);
+    final s = r.initial(SeededRandom(1));
+    expect(r.dist(s, 0), 8);
+    expect(r.moves(s).where((m) => mvFrom(m) < 0).length, 128);
+    playOut(r, 3);
+  });
+
+  test('yut: kısa yol', () {
+    expect(YutRules.travel(5, 3), 28); // köşeden merkeze
+    expect(YutRules.travel(28, 3), YutRules.done);
+    expect(YutRules.travel(-1, 5), 5);
+  });
+
+  test('narde: baştan turda bir pul', () {
+    const r = TavlaRules(TavlaVariant.narde);
+    final rnd = SeededRandom(5);
+    final s = r.initial(rnd);
+    final p = s.turn;
+    final head = r.head(p);
+    final before = r.mine(s, head, p);
+    var guard = 0;
+    while (s.turn == p && !r.needsChance(s) && guard++ < 6) {
+      final ms = r.moves(s);
+      r.apply(s, ms.first);
+    }
+    expect(before - r.mine(s, head, p) <= 2, isTrue);
   });
 
   test('reversi başlangıç: 4 hamle', () {

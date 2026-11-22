@@ -11,7 +11,9 @@ import 'grid_state.dart';
 /// noktaların bit kümesi değil; Plakoto için ayrıca pins listesi tutulur.
 /// hyper: 3 pulla tavla; nack: farklı dizilişle tavla; race: temassız
 /// toplama yarışı. Bu üçü tavla kurallarıyla oynanır.
-enum TavlaVariant { tavla, plakoto, fevga, hyper, nack, race }
+/// narde: uzun tavla; fevga gibi aynı yönde ve vurmasız, ama her turda
+/// başlangıç noktasından yalnızca bir pul çıkabilir.
+enum TavlaVariant { tavla, plakoto, fevga, hyper, nack, race, narde }
 
 class TavlaState extends GridState {
   /// Plakoto: noktada altta sıkışmış rakip pulun sahibi (+1: oyuncu 0, -1: oyuncu 1, 0 yok).
@@ -43,6 +45,17 @@ class TavlaRules extends BoardRules<TavlaState> {
   /// Tavla kurallarıyla (vurma, kırık) oynanan çeşit mi.
   bool get hits => variant == TavlaVariant.tavla || variant == TavlaVariant.hyper || variant == TavlaVariant.nack || variant == TavlaVariant.race;
 
+  /// Fevga ve Narde: iki taraf aynı yönde gider.
+  bool get sameWay => variant == TavlaVariant.fevga || variant == TavlaVariant.narde;
+
+  /// Narde: başlangıç noktası.
+  int head(int p) => p == 0 ? 23 : 11;
+
+  /// Narde: bu turda baştan çıkabilecek pul sayısı. İlk turda 6-6, 4-4 ya
+  /// da 3-3 gelirse iki pul çıkabilir. pins[24]: bu turda baştan çıkan,
+  /// pins[25]: turun çift zarı, pins[26]: tur başında baştaki pul sayısı.
+  int headLimit(TavlaState s) => s.pins[26] == 15 && (s.pins[25] == 6 || s.pins[25] == 4 || s.pins[25] == 3) ? 2 : 1;
+
   /// Oyuncu başına pul sayısı.
   int get checkers => variant == TavlaVariant.hyper ? 3 : 15;
 
@@ -63,7 +76,8 @@ class TavlaRules extends BoardRules<TavlaState> {
         c[23] = 15;
         c[0] = -15;
       case TavlaVariant.fevga:
-        // Fevga: iki taraf da aynı yönde, karşı köşelerden başlar.
+      case TavlaVariant.narde:
+        // Fevga/Narde: iki taraf da aynı yönde, karşı köşelerden başlar.
         c[23] = 15;
         c[11] = -15;
       case TavlaVariant.hyper:
@@ -89,7 +103,7 @@ class TavlaRules extends BoardRules<TavlaState> {
           c[23 - pts[i]] = -n[i];
         }
     }
-    final s = TavlaState(c, List.filled(8, 0), List.filled(24, 0));
+    final s = TavlaState(c, List.filled(8, 0), List.filled(27, 0));
     // İlk atış: zarlar eşit gelmezse büyük atan başlar (zarlarını kullanır).
     var a = 0, b = 0;
     while (a == b) {
@@ -103,6 +117,11 @@ class TavlaRules extends BoardRules<TavlaState> {
 
   void _setDice(TavlaState s, int a, int b) {
     s.vars[5] = 1;
+    if (variant == TavlaVariant.narde) {
+      s.pins[24] = 0;
+      s.pins[25] = a == b ? a : 0;
+      s.pins[26] = mine(s, head(s.turn), s.turn);
+    }
     if (a == b) {
       for (var i = 1; i <= 4; i++) {
         s.vars[i] = a;
@@ -127,13 +146,13 @@ class TavlaRules extends BoardRules<TavlaState> {
 
   /// Oyuncunun yolundaki sıra (0 = başlangıç, 23 = son nokta).
   int progress(int i, int p) {
-    if (variant == TavlaVariant.fevga && p == 1) return (11 - i + 24) % 24;
+    if (sameWay && p == 1) return (11 - i + 24) % 24;
     return p == 0 ? 23 - i : i;
   }
 
   /// Yoldaki sıradan nokta.
   int pointAt(int prog, int p) {
-    if (variant == TavlaVariant.fevga && p == 1) return (11 - prog + 24) % 24;
+    if (sameWay && p == 1) return (11 - prog + 24) % 24;
     return p == 0 ? 23 - prog : prog;
   }
 
@@ -161,6 +180,7 @@ class TavlaRules extends BoardRules<TavlaState> {
       case TavlaVariant.plakoto:
         return t == 0 || (t == 1 && s.pins[to] == 0);
       case TavlaVariant.fevga:
+      case TavlaVariant.narde:
         return t == 0;
     }
   }
@@ -177,6 +197,7 @@ class TavlaRules extends BoardRules<TavlaState> {
     final home = allHome(s, p);
     for (var i = 0; i < 24; i++) {
       if (mine(s, i, p) == 0) continue;
+      if (variant == TavlaVariant.narde && i == head(p) && s.pins[24] >= headLimit(s)) continue;
       final prog = progress(i, p) + die;
       if (prog <= 23) {
         final to = pointAt(prog, p);
@@ -250,6 +271,7 @@ class TavlaRules extends BoardRules<TavlaState> {
       s.cells[f]--;
     } else {
       s.cells[f] -= sg;
+      if (variant == TavlaVariant.narde && f == head(p)) s.pins[24]++;
       if (variant == TavlaVariant.plakoto && s.cells[f] == 0 && s.pins[f] != 0) {
         // Sıkışan pul serbest kalır.
         s.cells[f] = s.pins[f];
@@ -347,9 +369,9 @@ class TavlaRules extends BoardRules<TavlaState> {
     var v = (pips(s, o) - pips(s, player)) * 0.6;
     for (var i = 0; i < 24; i++) {
       final a = mine(s, i, player), b = mine(s, i, o);
-      if (a == 1) v -= variant == TavlaVariant.fevga ? 0 : 2.5 * (progress(i, player) > 12 ? 1.4 : 1);
+      if (a == 1) v -= sameWay ? 0 : 2.5 * (progress(i, player) > 12 ? 1.4 : 1);
       if (a >= 2) v += 1.5;
-      if (b == 1) v += variant == TavlaVariant.fevga ? 0 : 2;
+      if (b == 1) v += sameWay ? 0 : 2;
       if (b >= 2) v -= 1.2;
     }
     v += (s.cells[player == 0 ? off0 : off1] - s.cells[o == 0 ? off0 : off1]) * 3;
