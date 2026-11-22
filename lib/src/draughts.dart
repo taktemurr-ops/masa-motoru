@@ -108,11 +108,12 @@ class DraughtsRules extends BoardRules<GridState> {
   bool _in(int c, int r) => c >= 0 && r >= 0 && c < n && r < n;
 
   /// Alım dizileri: (bitiş, alınan kareler).
-  List<(int, List<int>)> _captures(GridState s, int from) {
+  List<(int, List<int>, bool)> _captures(GridState s, int from) {
     final v = s.cells[from];
     final p = owner(v);
-    final out = <(int, List<int>)>[];
+    final out = <(int, List<int>, bool)>[];
     final cells = List.of(s.cells)..[from] = -1;
+    final startKing = king(v);
 
     void dfs(int at, bool k, List<int> taken, (int, int)? lastDir) {
       var any = false;
@@ -146,7 +147,7 @@ class DraughtsRules extends BoardRules<GridState> {
           var nk = k;
           final reached = land ~/ n == promoRow(p);
           if (!k && reached && stopOnPromote) {
-            out.add((land, t));
+            out.add((land, t, false));
           } else {
             if (!k && reached && promoteMidCapture) nk = true;
             dfs(land, nk, t, d);
@@ -154,7 +155,7 @@ class DraughtsRules extends BoardRules<GridState> {
           cells[mid] = saved;
         }
       }
-      if (!any && taken.isNotEmpty) out.add((at, taken));
+      if (!any && taken.isNotEmpty) out.add((at, taken, k && !startKing));
     }
 
     dfs(from, king(v), const [], null);
@@ -162,13 +163,13 @@ class DraughtsRules extends BoardRules<GridState> {
   }
 
   /// Bütün yasal hamleler (hamle kodu + alım listesi).
-  List<(int, List<int>)> _all(GridState s) {
+  List<(int, List<int>, bool)> _all(GridState s) {
     final p = s.turn;
-    final caps = <(int, int, List<int>)>[];
+    final caps = <(int, int, List<int>, bool)>[];
     for (var i = 0; i < s.cells.length; i++) {
       if (owner(s.cells[i]) != p) continue;
-      for (final (end, taken) in _captures(s, i)) {
-        caps.add((i, end, taken));
+      for (final (end, taken, crowned) in _captures(s, i)) {
+        caps.add((i, end, taken, crowned));
       }
     }
     if (caps.isNotEmpty) {
@@ -181,16 +182,16 @@ class DraughtsRules extends BoardRules<GridState> {
         list = list.where((x) => king(s.cells[x.$1])).toList();
       }
       if (maxKingsTaken) {
-        int kings((int, int, List<int>) x) => x.$3.where((i) => king(s.cells[i])).length;
+        int kings((int, int, List<int>, bool) x) => x.$3.where((i) => king(s.cells[i])).length;
         final best = list.map(kings).reduce((a, b) => a > b ? a : b);
         list = list.where((x) => kings(x) == best).toList();
       }
       final seen = <int, int>{};
       return [
-        for (final (f, e, t) in list) (mv(f, e, seen.update(f * 1024 + e, (x) => x + 1, ifAbsent: () => 0)), t),
+        for (final (f, e, t, c) in list) (mv(f, e, seen.update(f * 1024 + e, (x) => x + 1, ifAbsent: () => 0)), t, c),
       ];
     }
-    final out = <(int, List<int>)>[];
+    final out = <(int, List<int>, bool)>[];
     for (var i = 0; i < s.cells.length; i++) {
       final v = s.cells[i];
       if (owner(v) != p) continue;
@@ -198,7 +199,7 @@ class DraughtsRules extends BoardRules<GridState> {
       for (final (dc, dr) in _dirs(p, k, false)) {
         var c = i % n + dc, r = i ~/ n + dr;
         while (_in(c, r) && s.cells[r * n + c] < 0) {
-          out.add((mv(i, r * n + c), const []));
+          out.add((mv(i, r * n + c), const [], false));
           if (!(k && flyingKings)) break;
           c += dc;
           r += dr;
@@ -216,9 +217,11 @@ class DraughtsRules extends BoardRules<GridState> {
     final p = s.turn;
     final from = mvFrom(m), to = mvTo(m);
     var taken = const <int>[];
-    for (final (code, t) in _all(s)) {
+    var crowned = false;
+    for (final (code, t, c) in _all(s)) {
       if (code == m) {
         taken = t;
+        crowned = c;
         break;
       }
     }
@@ -227,7 +230,7 @@ class DraughtsRules extends BoardRules<GridState> {
     for (final t in taken) {
       s.cells[t] = -1;
     }
-    if (!king(v) && to ~/ n == promoRow(p)) v = p + 2;
+    if (!king(v) && (crowned || to ~/ n == promoRow(p))) v = p + 2;
     s.cells[to] = v;
     s.last = to;
     s.ply++;
