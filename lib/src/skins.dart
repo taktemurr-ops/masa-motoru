@@ -297,12 +297,19 @@ class HexSkin extends BoardSkin {
 // ---------------------------------------------------------------- Noktalar ve kutular
 
 class DotsSkin extends BoardSkin {
-  final DotsRules rules;
-  const DotsSkin(this.rules);
+  const DotsSkin();
+  static DotsRules rules = const DotsRules(4, 4);
+  void _sync(BoardState s) {
+    final g = s as GridState;
+    if (rules.w != g.cols || rules.h != g.rows) rules = DotsRules(g.cols, g.rows);
+  }
   static const _p = [Color(0xFF2E6DB4), Color(0xFFD35400)];
 
   @override
-  double aspect(BoardState s) => (rules.w + 0.6) / (rules.h + 0.6);
+  double aspect(BoardState s) {
+    _sync(s);
+    return (rules.w + 0.6) / (rules.h + 0.6);
+  }
 
   double _step(Size size) => size.width / (rules.w + 0.6);
   Offset _dot(Size size, int c, int r) {
@@ -322,6 +329,7 @@ class DotsSkin extends BoardSkin {
 
   @override
   void paint(Canvas c, Size size, BoardState st, BoardPaintInfo info) {
+    _sync(st);
     final s = st as GridState;
     final step = _step(size);
     c.drawRRect(RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(step * 0.2)), Paint()..color = const Color(0xFFFBF7EE));
@@ -369,6 +377,7 @@ class DotsSkin extends BoardSkin {
 
   @override
   int hit(Offset p, Size size, BoardState st, [BoardPaintInfo? info]) {
+    _sync(st);
     var best = -1;
     var bd = double.infinity;
     final step = _step(size);

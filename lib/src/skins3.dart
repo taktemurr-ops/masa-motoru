@@ -17,15 +17,22 @@ TextPainter _num(String s, double size, Color c) => TextPainter(
 // ---------------------------------------------------------------- Mangala
 
 class MancalaSkin extends BoardSkin {
-  final MancalaRules rules;
-  const MancalaSkin(this.rules);
+  const MancalaSkin();
+  static MancalaRules rules = MancalaRules.mangala;
+  static void sync(BoardState s) {
+    final pits = ((s as GridState).cells.length - 2) ~/ 2;
+    if (rules.pits != pits) rules = MancalaRules('x', pits: pits);
+  }
 
   static const wood = Color(0xFF8A5A33);
   static const pit = Color(0xFF5E3B1F);
   static const seed = [Color(0xFFE8C36A), Color(0xFF6FB6A8), Color(0xFFD9775F), Color(0xFFB9A1D9)];
 
   @override
-  double aspect(BoardState s) => (rules.pits + 2) / 2.4;
+  double aspect(BoardState s) {
+    sync(s);
+    return (rules.pits + 2) / 2.4;
+  }
 
   /// Çukurun merkezi; oyuncu 0 alt sıra (soldan sağa), oyuncu 1 üst sıra (sağdan sola).
   Rect _pit(Size size, int i) {

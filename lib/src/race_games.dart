@@ -229,6 +229,7 @@ class SnakesRules extends BoardRules<GridState> {
   @override
   GridState initial(SeededRandom r) {
     final s = GridState(4 + 101, 1, [0, 0, 0, 0, ...List.filled(101, -1)]);
+    s.vars[3] = count;
     final used = <int>{0, 1, 100};
     int pick(int lo, int hi) {
       for (;;) {

@@ -9,8 +9,8 @@ import 'tavla.dart';
 
 /// Tavla tahtası: 24 üçgen, ortada kırık bölmesi, sağda toplama yeri.
 class TavlaSkin extends BoardSkin {
-  final TavlaRules rules;
-  const TavlaSkin(this.rules);
+  const TavlaSkin();
+  static const rules = TavlaRules();
 
   static const felt = Color(0xFF2F5D47);
   static const frame = Color(0xFF6B4226);
@@ -105,7 +105,7 @@ class TavlaSkin extends BoardSkin {
       }
       c.drawPath(tri..close(), Paint()..color = i % 2 == 0 ? triA : triB);
       final v = s.cells[i];
-      final pinned = rules.variant == TavlaVariant.plakoto && s.pins[i] != 0 ? (s.pins[i] > 0 ? 0 : 1) : -1;
+      final pinned = s.pins[i] != 0 ? (s.pins[i] > 0 ? 0 : 1) : -1;
       _stack(c, r, _top(i), v.abs(), v > 0 ? 0 : 1, info.colorBlind, pinned: pinned);
       if (info.selected == i) drawHint(c, r);
       if (info.targets.contains(i)) drawTarget(c, _top(i) ? Offset(r.center.dx, r.bottom - u * 0.3) : Offset(r.center.dx, r.top + u * 0.3), u * 0.18);

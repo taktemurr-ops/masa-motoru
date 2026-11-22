@@ -83,8 +83,8 @@ void drawButton(Canvas c, Rect r, String kind, bool enabled, {bool hint = false}
 // ---------------------------------------------------------------- Kızma Birader
 
 class KizmaSkin extends BoardSkin {
-  final KizmaRules rules;
-  const KizmaSkin(this.rules);
+  const KizmaSkin();
+  static KizmaRules _r(BoardState s) => KizmaRules((s as GridState).vars[3]);
 
   static const track = [
     (4, 10), (4, 9), (4, 8), (4, 7), (4, 6), (3, 6), (2, 6), (1, 6), (0, 6), (0, 5), //
@@ -124,6 +124,7 @@ class KizmaSkin extends BoardSkin {
   @override
   void paint(Canvas c, Size size, BoardState st, BoardPaintInfo info) {
     final s = st as GridState;
+    final rules = _r(s);
     final u = size.width / 11;
     c.drawRRect(RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(u * 0.4)), Paint()..color = const Color(0xFFF6EBD2));
     final ring = Paint()
@@ -182,8 +183,7 @@ class KizmaSkin extends BoardSkin {
 // ---------------------------------------------------------------- Yılan merdiven
 
 class SnakesSkin extends BoardSkin {
-  final SnakesRules rules;
-  const SnakesSkin(this.rules);
+  const SnakesSkin();
 
   @override
   double aspect(BoardState s) => 10 / 11.4;
@@ -247,7 +247,7 @@ class SnakesSkin extends BoardSkin {
         c.drawCircle(pa + Offset(u * 0.05, -u * 0.04), u * 0.035, Paint()..color = Colors.white);
       }
     }
-    for (var p = 0; p < rules.count; p++) {
+    for (var p = 0; p < s.vars[3]; p++) {
       final o = _sq(size, s.cells[p]) + Offset((p % 2 - 0.5) * u * 0.32, (p ~/ 2 - 0.5) * u * 0.32);
       drawDisc(c, o, u * 0.2, kPlayerColors[p], ring: true);
     }
@@ -394,8 +394,7 @@ class FarkleSkin extends BoardSkin {
 // ---------------------------------------------------------------- Yalancı zarı
 
 class LiarSkin extends BoardSkin {
-  final LiarRules rules;
-  const LiarSkin(this.rules);
+  const LiarSkin();
 
   @override
   double aspect(BoardState s) => 1 / 1.25;
@@ -413,6 +412,7 @@ class LiarSkin extends BoardSkin {
   @override
   void paint(Canvas c, Size size, BoardState st, BoardPaintInfo info) {
     final s = st as GridState;
+    final rules = LiarRules(s.vars[4]);
     c.drawRRect(RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(14)), Paint()..color = const Color(0xFF2E3F6B));
     final me = info.human;
     final w = size.width / 6.4;
