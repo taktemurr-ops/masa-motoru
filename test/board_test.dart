@@ -323,6 +323,50 @@ void main() {
     }
   }, timeout: const Timeout(Duration(minutes: 10)));
 
+  test('doğu satrançları perft', () {
+    const x = XiangqiRules();
+    final xs = x.initial(SeededRandom(1));
+    expect(perft(x, xs, 1), 44);
+    expect(perft(x, xs, 2), 1920);
+    expect(perft(x, xs, 3), 79666);
+    const sh = ShogiRules();
+    final ss = sh.initial(SeededRandom(1));
+    expect(perft(sh, ss, 1), 30);
+    expect(perft(sh, ss, 2), 900);
+    expect(perft(sh, ss, 3), 25470);
+    expect(const ShogiRules(5).moves(const ShogiRules(5).initial(SeededRandom(1))).length, 14);
+  });
+
+  test('doğu satrançları sonuna kadar oynanır', () {
+    for (final r in const <BoardRules>[XiangqiRules(), XiangqiRules(janggi: true), ShogiRules(5), ShogiRules()]) {
+      for (var seed = 1; seed <= 3; seed++) {
+        playOut(r, seed);
+      }
+    }
+  });
+
+  test('shogi: elden koyma ve iki piyon yasağı', () {
+    const r = ShogiRules(5);
+    final s = r.initial(SeededRandom(1));
+    s.cells[r.handCell(0, sP)] = 1;
+    final drops = r.moves(s).where((m) => mvFrom(m) == r.handCell(0, sP)).map(mvTo).toList();
+    // Kendi piyonunun sütununa (0) ve son sıraya konamaz.
+    expect(drops.any((t) => t % 5 == 0), isFalse);
+    expect(drops.any((t) => t ~/ 5 == 0), isFalse);
+    expect(drops, isNotEmpty);
+  });
+
+  test('doğu satrançları seviyeleri', () {
+    for (final (name, rules) in [('xiangqi', MasaPresets.xiangqi('oyun-cin-satranci')), ('janggi', MasaPresets.janggi('oyun-kore-satranci')), ('shogi', MasaPresets.shogi('oyun-japon-satranci'))]) {
+      for (final lv in const [5, 40]) {
+        final gl = rules.build(LevelPlanner(gameId: 'x-$name', optionalMechanics: const []).spec(lv));
+        // ignore: avoid_print
+        print('$name $lv ok=${gl.validation.ok} ply=${gl.validation.metric}');
+        expect(gl.validation.ok, isTrue, reason: name);
+      }
+    }
+  }, timeout: const Timeout(Duration(minutes: 15)));
+
   test('dama başlangıç hamleleri', () {
     expect(DraughtsRules.english.moves(DraughtsRules.english.initial(SeededRandom(1))).length, 7);
     expect(DraughtsRules.turkish.moves(DraughtsRules.turkish.initial(SeededRandom(1))).length, 8);

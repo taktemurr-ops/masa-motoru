@@ -5,6 +5,7 @@ import 'board_levels.dart';
 import 'chess.dart';
 import 'connect_games.dart';
 import 'draughts.dart';
+import 'east_chess.dart';
 import 'go.dart';
 import 'mancala.dart';
 import 'morris.dart';
@@ -291,5 +292,29 @@ class MasaPresets {
         solverFor: (_) => const Opponent(2, 0, 0),
         openingFor: (d) => 0,
         humanSeatFor: (_) => 0,
+      );
+
+  static BoardGameRules xiangqi(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (_) => const XiangqiRules(),
+        opponentFor: (d) => Opponent(const [1, 1, 2, 2, 2, 3, 3, 3, 3, 3][d - 1], 4000, _ladder[d - 1]),
+        solverFor: (_) => const Opponent(3, 6000, 0),
+        openingFor: (d) => d <= 3 ? 0 : 2,
+      );
+
+  static BoardGameRules janggi(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (_) => const XiangqiRules(janggi: true),
+        opponentFor: (d) => Opponent(const [1, 1, 2, 2, 2, 3, 3, 3, 3, 3][d - 1], 4000, _ladder[d - 1]),
+        solverFor: (_) => const Opponent(3, 6000, 0),
+        openingFor: (d) => d <= 3 ? 0 : 2,
+      );
+
+  static BoardGameRules shogi(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (d) => d <= 3 ? const ShogiRules(5) : const ShogiRules(9),
+        opponentFor: (d) => Opponent(const [1, 1, 2, 2, 2, 2, 3, 3, 3, 3][d - 1], 3000, _ladder[d - 1]),
+        solverFor: (_) => const Opponent(2, 4000, 0),
+        openingFor: (d) => d <= 3 ? 0 : 2,
       );
 }
