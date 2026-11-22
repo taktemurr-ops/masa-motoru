@@ -103,6 +103,12 @@ class BoardGameRules extends GameRules<BoardLevel> {
   @override
   int get levelCount => levels;
 
+  /// Aynı cihazda oynanabilecek en çok kişi (oyunun koltuk sayısı).
+  @override
+  int get localPlayers => rulesFor(1).players;
+
+  static bool _versus(LevelSpec spec) => spec.mode == GameModeId.versus || spec.mode == GameModeId.online;
+
   @override
   List<String> get optionalMechanics => const [];
 
@@ -123,7 +129,8 @@ class BoardGameRules extends GameRules<BoardLevel> {
     final s = rules.initial(r);
     final human = humanSeatFor(d) ?? r.nextInt(rules.players);
     // Açılış: kısa, gürültülü hamleler (oyun bitmemeli).
-    final opening = openingFor(d);
+    // Arkadaşla oyunda başlangıç dizilişinden başlanır.
+    final opening = _versus(spec) ? 0 : openingFor(d);
     final ai = BoardAI(rules, depth: 1, nodeBudget: 400, noise: 1, r: r);
     for (var i = 0; i < opening && !rules.isOver(s); i++) {
       if (rules.needsChance(s)) {
@@ -162,6 +169,8 @@ class BoardGameRules extends GameRules<BoardLevel> {
   @override
   Validation validate(BoardLevel level, LevelSpec spec) {
     if (level.rules.isOver(level.start)) return const Validation.fail('over at start');
+    // Oyuncuya karşı oyuncu: kurulum yeterli.
+    if (_versus(spec)) return const Validation.ok(0);
     // Şanslı oyunlarda sonuç zara bağlı; maçın kurulması yeterli.
     if (level.rules.stochastic) return const Validation.ok(0);
     final (end, judged) = simulateJudged(level, solver: solverFor(level.difficulty));

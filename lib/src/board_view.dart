@@ -86,6 +86,32 @@ class _BoardViewState extends State<BoardView> {
 
   PlayContext get ctx => widget.ctx;
   BoardRules get rules => level.rules;
+
+  // ---- Koltuklar: bu cihaz, yapay zekâ ya da çevrimiçi rakip ----------------
+  StreamSubscription<(int, String)>? _sub;
+  final List<(int, String)> _inbox = [];
+  Completer<void>? _wake;
+
+  bool get _multi => ctx.seats.isNotEmpty;
+  MatchLink? get _match => ctx.match;
+
+  /// Koltuğu bu cihazdaki biri mi oynuyor.
+  bool _isLocal(int seat) => _multi ? ctx.role(seat) == SeatRole.local : seat == level.human;
+
+  /// Koltuğu yapay zekâ mı oynuyor (çevrimiçide kopan oyuncular da).
+  bool _isAi(int seat) => _multi ? (ctx.role(seat) == SeatRole.ai || (_match?.dropped.contains(seat) ?? false)) : seat != level.human;
+
+  /// Ekranda "sen" sayılan koltuk: tek kişide oyuncu, sırayla oynamada
+  /// sırası gelen, çevrimiçide bu cihaz.
+  int get _viewer {
+    final m = _match;
+    if (m != null) return m.mySeat;
+    if (ctx.passAndPlay && _isLocal(s.turn)) return s.turn;
+    return _multi ? 0 : level.human;
+  }
+
+  /// Zar gibi şans olayları: çevrimiçide herkes aynı sonucu görür.
+  SeededRandom get _chance => _match != null ? SeededRandom(mixSeed([_match!.seed, s.ply, 7])) : r;
   bool get _over => rules.isOver(s) || s.ply >= rules.maxPly;
 
   @override
@@ -100,18 +126,41 @@ class _BoardViewState extends State<BoardView> {
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!_ended && mounted) setState(() => _seconds++);
     });
+    final m = _match;
+    if (m != null) {
+      _sub = m.moves.listen((e) {
+        _inbox.add(e);
+        final w = _wake;
+        _wake = null;
+        w?.complete();
+      });
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) => _advance());
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _sub?.cancel();
     super.dispose();
+  }
+
+  /// Çevrimiçi: sıradaki koltuğun hamlesini bekler.
+  Future<int?> _remoteMove(int seat) async {
+    while (mounted && !_ended) {
+      final i = _inbox.indexWhere((e) => e.$1 == seat);
+      if (i >= 0) return int.tryParse(_inbox.removeAt(i).$2);
+      // Bağlantısı kopan oyuncunun yerine bot geçtiyse bekleme.
+      if (_isAi(seat)) return null;
+      _wake = Completer<void>();
+      await Future.any([_wake!.future, Future<void>.delayed(const Duration(seconds: 2))]);
+    }
+    return null;
   }
 
   void _persist() => ctx.saveResume({'snap': s.serialize(), 'secs': _seconds, 'hints': _hints});
 
-  List<int> get _legal => !_over && s.turn == level.human && !rules.needsChance(s) ? rules.moves(s) : const [];
+  List<int> get _legal => !_over && _isLocal(s.turn) && !rules.needsChance(s) ? rules.moves(s) : const [];
 
   /// Sıra rakipteyse ya da şans olayı bekliyorsa oyunu ilerlet.
   Future<void> _advance() async {
@@ -124,11 +173,12 @@ class _BoardViewState extends State<BoardView> {
         setState(() => _busy = true);
         await Future<void>.delayed(const Duration(milliseconds: 450));
         if (!mounted) return;
-        setState(() => rules.applyChance(s, r));
+        final ch = _chance;
+        setState(() => rules.applyChance(s, ch));
         ctx.sfx(Sfx.tap);
         continue;
       }
-      if (s.turn == level.human) {
+      if (_isLocal(s.turn)) {
         final legal = rules.moves(s);
         if (legal.length == 1 && legal.first == kPass) {
           setState(() => _flash = _t(_tPass));
@@ -138,6 +188,7 @@ class _BoardViewState extends State<BoardView> {
             rules.apply(s, kPass);
             _flash = null;
           });
+          unawaited(_match?.send('$kPass'));
           continue;
         }
         setState(() => _busy = false);
@@ -145,12 +196,26 @@ class _BoardViewState extends State<BoardView> {
         return;
       }
       setState(() => _busy = true);
+      final mt = _match;
+      final seat = s.turn;
+      if (mt != null && (!_isAi(seat) || !mt.isHost)) {
+        // Rakibin (ya da ev sahibinin oynattığı botun) hamlesi ağdan gelir.
+        final rm = await _remoteMove(seat);
+        if (!mounted || _ended) return;
+        if (rm == null) continue;
+        final legal = rules.moves(s);
+        if (!legal.contains(rm)) continue; // bozuk hamle yok sayılır
+        setState(() => rules.apply(s, rm));
+        ctx.sfx(rm == kPass ? Sfx.tap : Sfx.place);
+        continue;
+      }
       final started = DateTime.now();
       final m = await compute(_runAi, _AiJob(rules, s.serialize(), level.opp.depth, level.opp.budget, level.opp.noise, r.nextInt(1 << 30)));
       final spent = DateTime.now().difference(started).inMilliseconds;
       if (spent < 420) await Future<void>.delayed(Duration(milliseconds: 420 - spent));
       if (!mounted || _ended) return;
       setState(() => rules.apply(s, m));
+      if (mt != null) unawaited(mt.send('$m', asSeat: seat));
       ctx.sfx(m == kPass ? Sfx.tap : Sfx.place);
     }
   }
@@ -191,6 +256,7 @@ class _BoardViewState extends State<BoardView> {
 
   void _play(int m) {
     _undo.add(s.serialize());
+    unawaited(_match?.send('$m'));
     setState(() {
       rules.apply(s, m);
       _selected = null;
@@ -202,7 +268,7 @@ class _BoardViewState extends State<BoardView> {
   }
 
   void _doUndo() {
-    if (_undo.isEmpty || _busy || _ended) return;
+    if (_undo.isEmpty || _busy || _ended || _match != null) return;
     setState(() {
       s = rules.parse(_undo.removeLast());
       _undos++;
@@ -231,6 +297,22 @@ class _BoardViewState extends State<BoardView> {
     if (_ended) return;
     _ended = true;
     _timer?.cancel();
+    if (_multi) {
+      final w = rules.winner(s);
+      final me = _viewer;
+      final iWon = _match != null ? w == me : w >= 0;
+      ctx.sfx(iWon ? Sfx.win : Sfx.lose);
+      unawaited(_match?.finish(w));
+      ctx.finish(RoundResult(
+        won: iWon,
+        score: iWon ? 300 : 30,
+        seconds: _seconds,
+        moves: _moves,
+        headline: w < 0 ? ctx.t('draw_title') : (_match != null ? null : ctx.t('player_wins', {'n': w + 1})),
+        gameStats: {'games_won': iWon ? 1 : 0, 'moves_made': _moves},
+      ));
+      return;
+    }
     final won = level.goalMet(s);
     ctx.sfx(won ? Sfx.win : Sfx.lose);
     final o = outcomeFor(rules, s, level.human);
@@ -259,7 +341,7 @@ class _BoardViewState extends State<BoardView> {
       targets: targets,
       hintFrom: _hintFrom,
       hintTo: _hintTo,
-      human: level.human,
+      human: ctx.passAndPlay ? 0 : _viewer,
       colors: ctx.pieceColors,
       colorBlind: ctx.colorBlind,
       canAct: legal.isNotEmpty && !_busy,
@@ -269,8 +351,13 @@ class _BoardViewState extends State<BoardView> {
   @override
   Widget build(BuildContext context) {
     final status = rules.status(s, ctx.lang);
-    final myTurn = s.turn == level.human && !_over;
-    final turnText = _flash ?? (myTurn ? _t(_tYourTurn) : _t(_tThinking));
+    final myTurn = _isLocal(s.turn) && !_over;
+    final turnText = _flash ??
+        (ctx.passAndPlay && myTurn
+            ? ctx.seatName(s.turn)
+            : myTurn
+                ? _t(_tYourTurn)
+                : (_match != null && !_isAi(s.turn) ? ctx.seatName(s.turn) : _t(_tThinking)));
     final info = _info;
     return LayoutBuilder(builder: (context, cons) {
       final aspect = widget.skin.aspect(s);
@@ -294,8 +381,8 @@ class _BoardViewState extends State<BoardView> {
           ]),
         ),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text('${_t(_tYou)}: '),
-          SizedBox(width: 20, height: 20, child: CustomPaint(painter: _SeatP(widget.skin, level.human, info))),
+          Text(ctx.passAndPlay ? '' : '${_t(_tYou)}: '),
+          SizedBox(width: 20, height: 20, child: CustomPaint(painter: _SeatP(widget.skin, ctx.passAndPlay ? s.turn : _viewer, info))),
           const SizedBox(width: 12),
           AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 200),
@@ -323,7 +410,8 @@ class _BoardViewState extends State<BoardView> {
           child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
             IconButton.filledTonal(
                 onPressed: _ended || _busy || !myTurn ? null : _hint, icon: const Icon(Icons.lightbulb), tooltip: ctx.t('hint')),
-            IconButton.filledTonal(
+            if (_match == null)
+              IconButton.filledTonal(
                 onPressed: _undo.isNotEmpty && !_busy && !_ended ? _doUndo : null, icon: const Icon(Icons.undo), tooltip: ctx.t('undo')),
             if (_legal.length > 1 && _legal.contains(kPass))
               FilledButton.tonal(onPressed: _busy || _ended ? null : () => _play(kPass), child: Text(_t(_tPass))),
