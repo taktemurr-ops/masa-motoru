@@ -14,6 +14,11 @@ void main() {
     'dama': MasaPresets.draughts('oyun-dama', DraughtsRules.english),
     'turk-damasi': MasaPresets.draughts('oyun-turk-damasi', DraughtsRules.turkish),
     'satranc': MasaPresets.chess('oyun-satranc'),
+    'mangala': MasaPresets.mancala('oyun-mangala', MancalaRules.mangala),
+    'kalah': MasaPresets.mancala('oyun-kalah', MancalaRules.kalah),
+    'oware': MasaPresets.mancala('oyun-oware', MancalaRules.oware),
+    'dokuz-tas': MasaPresets.morris('oyun-dokuz-tas'),
+    'go': MasaPresets.go('oyun-go'),
   };
 
   games.forEach((name, rules) {

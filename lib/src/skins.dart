@@ -106,7 +106,7 @@ class XoxSkin extends BoardSkin {
   }
 
   @override
-  int hit(Offset p, Size size, BoardState st) {
+  int hit(Offset p, Size size, BoardState st, [BoardPaintInfo? info]) {
     final s = st as GridState;
     final c = (p.dx / size.width * s.cols).floor(), r = (p.dy / size.height * s.rows).floor();
     return s.inside(c, r) ? r * s.cols + c : -1;
@@ -186,7 +186,7 @@ class DiscSkin extends BoardSkin {
   }
 
   @override
-  int hit(Offset p, Size size, BoardState st) {
+  int hit(Offset p, Size size, BoardState st, [BoardPaintInfo? info]) {
     final s = st as GridState;
     final c = (p.dx / size.width * s.cols).floor(), r = (p.dy / size.height * s.rows).floor();
     if (!s.inside(c, r)) return -1;
@@ -276,7 +276,7 @@ class HexSkin extends BoardSkin {
   }
 
   @override
-  int hit(Offset p, Size size, BoardState st) {
+  int hit(Offset p, Size size, BoardState st, [BoardPaintInfo? info]) {
     final s = st as GridState;
     var best = -1;
     var bd = double.infinity;
@@ -368,7 +368,7 @@ class DotsSkin extends BoardSkin {
   }
 
   @override
-  int hit(Offset p, Size size, BoardState st) {
+  int hit(Offset p, Size size, BoardState st, [BoardPaintInfo? info]) {
     var best = -1;
     var bd = double.infinity;
     final step = _step(size);

@@ -43,7 +43,7 @@ abstract class BoardSkin {
   void paint(Canvas c, Size size, BoardState s, BoardPaintInfo info);
 
   /// Dokunulan nokta → kare/hücre (yoksa -1).
-  int hit(Offset p, Size size, BoardState s);
+  int hit(Offset p, Size size, BoardState s, [BoardPaintInfo? info]);
 
   /// Koltuğun taşını küçük bir kutuya çiz (üstteki "Sen" göstergesi).
   void paintSeat(Canvas c, Rect r, int seat, BoardPaintInfo info);
@@ -310,7 +310,7 @@ class _BoardViewState extends State<BoardView> {
         Expanded(
           child: Center(
             child: GestureDetector(
-              onTapUp: (d) => _tap(widget.skin.hit(d.localPosition, size, s)),
+              onTapUp: (d) => _tap(widget.skin.hit(d.localPosition, size, s, info)),
               child: Semantics(
                 label: 'board',
                 child: SizedBox(width: bw, height: bh, child: CustomPaint(painter: _BoardP(widget.skin, s, info, s.ply, _selected, _hintTo))),
@@ -325,6 +325,8 @@ class _BoardViewState extends State<BoardView> {
                 onPressed: _ended || _busy || !myTurn ? null : _hint, icon: const Icon(Icons.lightbulb), tooltip: ctx.t('hint')),
             IconButton.filledTonal(
                 onPressed: _undo.isNotEmpty && !_busy && !_ended ? _doUndo : null, icon: const Icon(Icons.undo), tooltip: ctx.t('undo')),
+            if (_legal.length > 1 && _legal.contains(kPass))
+              FilledButton.tonal(onPressed: _busy || _ended ? null : () => _play(kPass), child: Text(_t(_tPass))),
           ]),
         ),
       ]);

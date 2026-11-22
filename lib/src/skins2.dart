@@ -18,16 +18,21 @@ abstract class CheckerSkin extends BoardSkin {
   @override
   double aspect(BoardState s) => 1;
 
+  /// Oyuncu siyahsa (koltuk 1) tahta ters çevrilir.
+  static bool flip = false;
+
   Rect cell(GridState s, Size size, int i) {
+    if (flip) i = s.cells.length - 1 - i;
     final w = size.width / s.cols;
     return Rect.fromLTWH((i % s.cols) * w, (i ~/ s.cols) * w, w, w);
   }
 
   void paintBoard(Canvas c, Size size, GridState s, BoardPaintInfo info, {bool allLight = false}) {
+    flip = info.human == 1;
     c.drawRRect(RRect.fromRectAndRadius((Offset.zero & size).inflate(4), const Radius.circular(8)), Paint()..color = const Color(0xFF5A3A22));
     for (var i = 0; i < s.cells.length; i++) {
       final r = cell(s, size, i);
-      final darkSq = !allLight && ((i % s.cols) + (i ~/ s.cols)) % 2 == 1;
+      final darkSq = !allLight && ((i % s.cols) + (i ~/ s.cols)) % 2 == (s.cols.isEven ? 1 : 0);
       c.drawRect(r, Paint()..color = darkSq ? dark : light);
       if (allLight) {
         c.drawRect(
@@ -52,11 +57,13 @@ abstract class CheckerSkin extends BoardSkin {
   }
 
   @override
-  int hit(Offset p, Size size, BoardState st) {
+  int hit(Offset p, Size size, BoardState st, [BoardPaintInfo? info]) {
     final s = st as GridState;
     final w = size.width / s.cols;
     final c = (p.dx / w).floor(), r = (p.dy / w).floor();
-    return s.inside(c, r) ? r * s.cols + c : -1;
+    if (!s.inside(c, r)) return -1;
+    final i = r * s.cols + c;
+    return (info?.human ?? 0) == 1 ? s.cells.length - 1 - i : i;
   }
 }
 
