@@ -29,6 +29,12 @@ class MancalaRules extends BoardRules<GridState> {
   static const mangala = MancalaRules('mangala');
   static const kalah = MancalaRules('kalah', capture: MancalaCapture.kalah);
   static const oware = MancalaRules('oware', capture: MancalaCapture.oware);
+  static const kalah6 = MancalaRules('kalah-6', seeds: 6, capture: MancalaCapture.kalah);
+  static const kalah3 = MancalaRules('kalah-3', seeds: 3, capture: MancalaCapture.kalah);
+  static const owareShort = MancalaRules('oware-5', pits: 5, capture: MancalaCapture.oware);
+  static const mangala5 = MancalaRules('mangala-5', seeds: 5);
+  static const mangalaShort = MancalaRules('mangala-4', pits: 4);
+  static const mangalaLong = MancalaRules('mangala-8', pits: 8, seeds: 3);
 
   int store(int p) => p == 0 ? pits : 2 * pits + 1;
   int get total => 2 * pits * seeds;

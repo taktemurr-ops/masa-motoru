@@ -30,6 +30,15 @@ class DraughtsRules extends BoardRules<GridState> {
   /// Taş son sıraya varınca alım biter mi (İngiliz).
   final bool stopOnPromote;
 
+  /// Taş damayı alabilir mi (İtalyan: alamaz).
+  final bool menCaptureKings;
+
+  /// Dama ile alım varsa önce o yapılır (İtalyan, Çek).
+  final bool kingFirst;
+
+  /// Eşit alımlarda en çok dama alan yol seçilir (İtalyan, İspanyol).
+  final bool maxKingsTaken;
+
   const DraughtsRules({
     required this.id,
     this.n = 8,
@@ -40,6 +49,9 @@ class DraughtsRules extends BoardRules<GridState> {
     this.maxCapture = false,
     this.promoteMidCapture = false,
     this.stopOnPromote = false,
+    this.menCaptureKings = true,
+    this.kingFirst = false,
+    this.maxKingsTaken = false,
   });
 
   static const english = DraughtsRules(id: 'dama', menCaptureBack: false, flyingKings: false, stopOnPromote: true);
@@ -48,6 +60,10 @@ class DraughtsRules extends BoardRules<GridState> {
   static const brazilian = DraughtsRules(id: 'brezilya-damasi', maxCapture: true);
   static const pool = DraughtsRules(id: 'pool-damasi');
   static const international = DraughtsRules(id: 'uluslararasi-dama', n: 10, rowsOfMen: 4, maxCapture: true);
+  static const italian = DraughtsRules(id: 'italyan-damasi', menCaptureBack: false, flyingKings: false, menCaptureKings: false, maxCapture: true, kingFirst: true, maxKingsTaken: true);
+  static const spanish = DraughtsRules(id: 'ispanyol-damasi', menCaptureBack: false, maxCapture: true, maxKingsTaken: true);
+  static const czech = DraughtsRules(id: 'cek-damasi', menCaptureBack: false, kingFirst: true);
+  static const canadian = DraughtsRules(id: 'kanada-damasi', n: 12, rowsOfMen: 5, maxCapture: true);
 
   @override
   int get maxPly => 260;
@@ -113,6 +129,7 @@ class DraughtsRules extends BoardRules<GridState> {
         if (!_in(c, r)) continue;
         final mid = r * n + c;
         if (owner(cells[mid]) != 1 - p || taken.contains(mid)) continue;
+        if (!k && !menCaptureKings && king(cells[mid])) continue;
         var lc = c + dc, lr = r + dr;
         final lands = <int>[];
         while (_in(lc, lr) && cells[lr * n + lc] < 0) {
@@ -159,6 +176,14 @@ class DraughtsRules extends BoardRules<GridState> {
       if (maxCapture) {
         final best = caps.map((x) => x.$3.length).reduce((a, b) => a > b ? a : b);
         list = caps.where((x) => x.$3.length == best).toList();
+      }
+      if (kingFirst && list.any((x) => king(s.cells[x.$1]))) {
+        list = list.where((x) => king(s.cells[x.$1])).toList();
+      }
+      if (maxKingsTaken) {
+        int kings((int, int, List<int>) x) => x.$3.where((i) => king(s.cells[i])).length;
+        final best = list.map(kings).reduce((a, b) => a > b ? a : b);
+        list = list.where((x) => kings(x) == best).toList();
       }
       final seen = <int, int>{};
       return [

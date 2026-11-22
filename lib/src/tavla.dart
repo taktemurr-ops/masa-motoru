@@ -9,7 +9,9 @@ import 'grid_state.dart';
 /// vars: [0] bitti, [1..4] kalan zarlar (0 kullanıldı), [5] zar atıldı mı,
 /// [6] kazanç tipi (1 tek, 2 mars, 3 katmerli mars), [7] sıkıştırılan (Plakoto)
 /// noktaların bit kümesi değil; Plakoto için ayrıca pins listesi tutulur.
-enum TavlaVariant { tavla, plakoto, fevga }
+/// hyper: 3 pulla tavla; nack: farklı dizilişle tavla; race: temassız
+/// toplama yarışı. Bu üçü tavla kurallarıyla oynanır.
+enum TavlaVariant { tavla, plakoto, fevga, hyper, nack, race }
 
 class TavlaState extends GridState {
   /// Plakoto: noktada altta sıkışmış rakip pulun sahibi (+1: oyuncu 0, -1: oyuncu 1, 0 yok).
@@ -38,6 +40,12 @@ class TavlaRules extends BoardRules<TavlaState> {
 
   static const bar0 = 24, bar1 = 25, off0 = 26, off1 = 27;
 
+  /// Tavla kurallarıyla (vurma, kırık) oynanan çeşit mi.
+  bool get hits => variant == TavlaVariant.tavla || variant == TavlaVariant.hyper || variant == TavlaVariant.nack || variant == TavlaVariant.race;
+
+  /// Oyuncu başına pul sayısı.
+  int get checkers => variant == TavlaVariant.hyper ? 3 : 15;
+
   @override
   TavlaState initial(SeededRandom r) {
     final c = List.filled(28, 0);
@@ -58,6 +66,28 @@ class TavlaRules extends BoardRules<TavlaState> {
         // Fevga: iki taraf da aynı yönde, karşı köşelerden başlar.
         c[23] = 15;
         c[11] = -15;
+      case TavlaVariant.hyper:
+        for (var i = 0; i < 3; i++) {
+          c[23 - i] = 1;
+          c[i] = -1;
+        }
+      case TavlaVariant.nack:
+        c[23] = 2;
+        c[22] = 2;
+        c[12] = 4;
+        c[7] = 3;
+        c[5] = 4;
+        c[0] = -2;
+        c[1] = -2;
+        c[11] = -4;
+        c[16] = -3;
+        c[18] = -4;
+      case TavlaVariant.race:
+        const pts = [11, 9, 7, 5, 3, 1], n = [3, 3, 3, 2, 2, 2];
+        for (var i = 0; i < 6; i++) {
+          c[pts[i]] = n[i];
+          c[23 - pts[i]] = -n[i];
+        }
     }
     final s = TavlaState(c, List.filled(8, 0), List.filled(24, 0));
     // İlk atış: zarlar eşit gelmezse büyük atan başlar (zarlarını kullanır).
@@ -124,6 +154,9 @@ class TavlaRules extends BoardRules<TavlaState> {
     final t = theirs(s, to, p);
     switch (variant) {
       case TavlaVariant.tavla:
+      case TavlaVariant.hyper:
+      case TavlaVariant.nack:
+      case TavlaVariant.race:
         return t <= 1;
       case TavlaVariant.plakoto:
         return t == 0 || (t == 1 && s.pins[to] == 0);
@@ -136,7 +169,7 @@ class TavlaRules extends BoardRules<TavlaState> {
   List<(int, int)> _steps(TavlaState s, int p, int die) {
     final out = <(int, int)>[];
     final bar = p == 0 ? bar0 : bar1;
-    if (variant == TavlaVariant.tavla && s.cells[bar] > 0) {
+    if (hits && s.cells[bar] > 0) {
       final to = pointAt(die - 1, p);
       if (_canLand(s, to, p)) out.add((bar, to));
       return out;
@@ -227,7 +260,7 @@ class TavlaRules extends BoardRules<TavlaState> {
       s.cells[t]++;
     } else {
       if (theirs(s, t, p) == 1) {
-        if (variant == TavlaVariant.tavla) {
+        if (hits) {
           s.cells[t] = 0;
           s.cells[p == 0 ? bar1 : bar0]++;
         } else if (variant == TavlaVariant.plakoto) {
@@ -257,7 +290,7 @@ class TavlaRules extends BoardRules<TavlaState> {
       _do(s, mvFrom(m), mvTo(m), mvExtra(m));
       s.last = mvTo(m);
     }
-    if (s.cells[p == 0 ? off0 : off1] >= 15) {
+    if (s.cells[p == 0 ? off0 : off1] >= checkers) {
       s.vars[0] = 1;
       final o = 1 - p;
       var type = 1;
@@ -267,7 +300,7 @@ class TavlaRules extends BoardRules<TavlaState> {
         for (var i = 0; i < 24; i++) {
           if (mine(s, i, o) > 0 && progress(i, o) < 6) back = true;
         }
-        if (back && variant == TavlaVariant.tavla) type = 3;
+        if (back && hits) type = 3;
       }
       s.vars[6] = type;
       s.vars[7] = p;
