@@ -157,13 +157,13 @@ class LineRules extends BoardRules<GridState> {
         if (x == player) a++;
         if (x == 1 - player) b++;
       }
-      if (b == 0 && a > 0) v += _weight(a);
-      if (a == 0 && b > 0) v -= _weight(b) * 1.1;
+      if (b == 0 && a > 0) v += _weight(a) * (s.turn == player ? 1.3 : 1.0);
+      if (a == 0 && b > 0) v -= _weight(b) * (s.turn == player ? 1.0 : 1.5);
     }
     return (v / (k * 3)).clamp(-99, 99).toDouble();
   }
 
-  double _weight(int n) => switch (k - n) { 0 => 1000, 1 => 40, 2 => 6, 3 => 1.5, _ => 0.3 };
+  double _weight(int n) => switch (k - n) { 0 => 1000, 1 => 60, 2 => 12, 3 => 2, _ => 0.4 };
 
   @override
   GridState fromJson(Map<String, dynamic> j) => GridState.read(j);

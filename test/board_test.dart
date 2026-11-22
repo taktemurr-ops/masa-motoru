@@ -11,6 +11,9 @@ void main() {
     'reversi': MasaPresets.reversi('oyun-reversi'),
     'hex': MasaPresets.hex('oyun-hex'),
     'dots': MasaPresets.dots('oyun-noktalar-ve-kutular'),
+    'dama': MasaPresets.draughts('oyun-dama', DraughtsRules.english),
+    'turk-damasi': MasaPresets.draughts('oyun-turk-damasi', DraughtsRules.turkish),
+    'satranc': MasaPresets.chess('oyun-satranc'),
   };
 
   games.forEach((name, rules) {
@@ -56,5 +59,39 @@ void main() {
     expect(s.turn, who);
     expect(s.vars[1 + who], 1);
   });
-}
 
+  int perft(ChessRules r, GridState s, int d) {
+    if (d == 0) return 1;
+    var n = 0;
+    for (final m in r.moves(s)) {
+      final c = s.copy();
+      r.apply(c, m);
+      n += perft(r, c, d - 1);
+    }
+    return n;
+  }
+
+  test('satranç perft', () {
+    const r = ChessRules();
+    final s = r.initial(SeededRandom(1));
+    expect(perft(r, s, 1), 20);
+    expect(perft(r, s, 2), 400);
+    expect(perft(r, s, 3), 8902);
+  });
+
+  test('satranç çeşitleri başlar ve biter', () {
+    for (final v in ChessVariant.values) {
+      final rules = MasaPresets.chess('oyun-satranc-cesitleri', v);
+      final gl = rules.build(LevelPlanner(gameId: 'x-${v.name}', optionalMechanics: const []).spec(40));
+      // ignore: avoid_print
+      print('${v.name} ok=${gl.validation.ok} ply=${gl.validation.metric}');
+      expect(gl.validation.ok, isTrue, reason: v.name);
+    }
+  }, timeout: const Timeout(Duration(minutes: 10)));
+
+  test('dama başlangıç hamleleri', () {
+    expect(DraughtsRules.english.moves(DraughtsRules.english.initial(SeededRandom(1))).length, 7);
+    expect(DraughtsRules.turkish.moves(DraughtsRules.turkish.initial(SeededRandom(1))).length, 8);
+    expect(DraughtsRules.international.moves(DraughtsRules.international.initial(SeededRandom(1))).length, 9);
+  });
+}

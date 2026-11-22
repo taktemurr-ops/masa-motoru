@@ -1,5 +1,7 @@
 import 'board_levels.dart';
+import 'chess.dart';
 import 'connect_games.dart';
+import 'draughts.dart';
 import 'line_games.dart';
 import 'reversi.dart';
 
@@ -26,9 +28,10 @@ class MasaPresets {
   static BoardGameRules besleme(String id) => BoardGameRules(
         gameId: id,
         rulesFor: (d) => d <= 4 ? const LineRules('besleme', 11, 11, 5) : const LineRules('besleme', 15, 15, 5),
-        opponentFor: (d) => Opponent(d <= 3 ? 1 : (d <= 7 ? 2 : 3), 6000, const [1.0, 0.8, 0.65, 0.5, 0.4, 0.3, 0.2, 0.12, 0.06, 0.02][d - 1]),
-        solverFor: (_) => const Opponent(3, 9000, 0),
+        opponentFor: (d) => Opponent(d <= 3 ? 1 : (d <= 6 ? 2 : (d <= 8 ? 3 : 4)), 8000, const [1.0, 0.8, 0.65, 0.5, 0.4, 0.3, 0.2, 0.12, 0.06, 0.02][d - 1]),
+        solverFor: (_) => const Opponent(4, 15000, 0),
         openingFor: (d) => d <= 3 ? 0 : 2,
+        humanSeatFor: (_) => 0,
       );
 
   static BoardGameRules reversi(String id) => BoardGameRules(
@@ -51,7 +54,23 @@ class MasaPresets {
         gameId: id,
         rulesFor: (d) => d <= 2 ? const DotsRules(3, 3) : (d <= 5 ? const DotsRules(4, 4) : const DotsRules(5, 5)),
         opponentFor: (d) => Opponent(const [1, 1, 2, 2, 2, 3, 3, 3, 4, 4][d - 1], 6000, const [1.0, 0.8, 0.65, 0.5, 0.4, 0.3, 0.2, 0.12, 0.06, 0.02][d - 1]),
-        solverFor: (_) => const Opponent(4, 20000, 0),
+        solverFor: (_) => const Opponent(4, 10000, 0),
         openingFor: (d) => 0,
+      );
+
+  static BoardGameRules draughts(String id, DraughtsRules rules) => BoardGameRules(
+        gameId: id,
+        rulesFor: (_) => rules,
+        opponentFor: (d) => Opponent(const [1, 1, 2, 2, 3, 3, 4, 4, 5, 5][d - 1], 12000, const [1.0, 0.8, 0.65, 0.5, 0.4, 0.3, 0.2, 0.12, 0.06, 0.02][d - 1]),
+        solverFor: (_) => const Opponent(5, 25000, 0),
+        openingFor: (d) => d <= 3 ? 0 : 2,
+      );
+
+  static BoardGameRules chess(String id, [ChessVariant v = ChessVariant.standard]) => BoardGameRules(
+        gameId: id,
+        rulesFor: (_) => ChessRules(v),
+        opponentFor: (d) => Opponent(const [1, 1, 2, 2, 2, 3, 3, 3, 4, 4][d - 1], 9000, const [1.0, 0.85, 0.7, 0.55, 0.4, 0.3, 0.2, 0.12, 0.06, 0.03][d - 1]),
+        solverFor: (_) => const Opponent(4, 20000, 0),
+        openingFor: (d) => d <= 3 ? 0 : 2,
       );
 }
