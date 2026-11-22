@@ -405,6 +405,44 @@ void main() {
     }
   }, timeout: const Timeout(Duration(minutes: 10)));
 
+  test('yerleşim geometrisi: 19 altıgen, 54 köşe, 72 kenar', () {
+    final g = SettleGeo.i;
+    expect(g.hexCenter.length, 19);
+    expect(g.vertex.length, 54);
+    expect(g.edges.length, 72);
+  });
+
+  test('emlak, fetih ve yerleşim sonuna kadar oynanır', () {
+    for (final r in const <BoardRules>[PropertyRules(2), PropertyRules(4), ConquestRules(2), ConquestRules(4), SettleRules(2), SettleRules(4)]) {
+      for (var seed = 1; seed <= 3; seed++) {
+        final rnd = SeededRandom(seed);
+        final s = r.initial(rnd);
+        var k = 0;
+        while (!r.isOver(s) && s.ply < r.maxPly && k++ < 6000) {
+          if (r.needsChance(s)) {
+            r.applyChance(s, rnd);
+            continue;
+          }
+          final m = r.policy(s, 0.3, rnd) ?? r.moves(s).first;
+          expect(r.moves(s).contains(m), isTrue, reason: r.id);
+          r.apply(s, m);
+        }
+        // ignore: avoid_print
+        print('${r.id} seed=$seed ply=${s.ply} over=${r.isOver(s)} winner=${r.winner(s)}');
+        expect(r.isOver(s) || s.ply >= r.maxPly, isTrue, reason: r.id);
+      }
+    }
+  });
+
+  test('emlak, fetih ve yerleşim seviyeleri', () {
+    for (final (name, rules) in [('emlak', MasaPresets.property('oyun-emlak-ticareti')), ('fetih', MasaPresets.conquest('oyun-dunya-hakimiyeti')), ('yerlesim', MasaPresets.settle('oyun-yerlesim-kurma'))]) {
+      for (final lv in const [5, 40, 77]) {
+        final gl = rules.build(LevelPlanner(gameId: 'x-$name', optionalMechanics: const []).spec(lv));
+        expect(gl.validation.ok, isTrue, reason: name);
+      }
+    }
+  });
+
   test('dama başlangıç hamleleri', () {
     expect(DraughtsRules.english.moves(DraughtsRules.english.initial(SeededRandom(1))).length, 7);
     expect(DraughtsRules.turkish.moves(DraughtsRules.turkish.initial(SeededRandom(1))).length, 8);

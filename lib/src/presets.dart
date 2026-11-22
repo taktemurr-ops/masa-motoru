@@ -4,11 +4,14 @@ import 'race2.dart';
 import 'board_levels.dart';
 import 'chess.dart';
 import 'connect_games.dart';
+import 'conquest_game.dart';
 import 'corner_place.dart';
 import 'draughts.dart';
 import 'east_chess.dart';
 import 'go.dart';
 import 'mancala.dart';
+import 'property_game.dart';
+import 'settle_game.dart';
 import 'morris.dart';
 import 'tavla.dart';
 import 'dice_games.dart';
@@ -324,6 +327,35 @@ class MasaPresets {
         rulesFor: (_) => const CornerRules(),
         opponentFor: (d) => Opponent(d <= 5 ? 1 : 2, 2500, _ladder[d - 1]),
         solverFor: (_) => const Opponent(1, 3000, 0),
+        openingFor: (d) => 0,
+        humanSeatFor: (_) => 0,
+      );
+
+  static int _seats(int d) => d <= 3 ? 2 : (d <= 6 ? 3 : 4);
+
+  static BoardGameRules property(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (d) => PropertyRules(_seats(d)),
+        opponentFor: _noisy,
+        solverFor: (_) => const Opponent(2, 0, 0),
+        openingFor: (d) => 0,
+        humanSeatFor: (_) => 0,
+      );
+
+  static BoardGameRules conquest(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (d) => ConquestRules(_seats(d)),
+        opponentFor: _noisy,
+        solverFor: (_) => const Opponent(2, 0, 0),
+        openingFor: (d) => 0,
+        humanSeatFor: (_) => 0,
+      );
+
+  static BoardGameRules settle(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (d) => SettleRules(_seats(d)),
+        opponentFor: _noisy,
+        solverFor: (_) => const Opponent(2, 0, 0),
         openingFor: (d) => 0,
         humanSeatFor: (_) => 0,
       );
