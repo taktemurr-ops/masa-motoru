@@ -162,6 +162,8 @@ class BoardGameRules extends GameRules<BoardLevel> {
   @override
   Validation validate(BoardLevel level, LevelSpec spec) {
     if (level.rules.isOver(level.start)) return const Validation.fail('over at start');
+    // Şanslı oyunlarda sonuç zara bağlı; maçın kurulması yeterli.
+    if (level.rules.stochastic) return const Validation.ok(0);
     final (end, judged) = simulateJudged(level, solver: solverFor(level.difficulty));
     if (judged) return Validation.ok(end.ply);
     if (!level.rules.isOver(end) && end.ply < level.rules.maxPly) return const Validation.fail('did not finish');

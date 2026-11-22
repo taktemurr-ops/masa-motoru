@@ -323,6 +323,44 @@ class TavlaRules extends BoardRules<TavlaState> {
     return v;
   }
 
+  /// Hızlı politika: her ilk adım için kalan zarları açgözlü oynayıp
+  /// son konumu değerlendir.
+  @override
+  int? policy(TavlaState s, double noise, SeededRandom r) {
+    final ms = moves(s);
+    if (ms.length == 1) return ms.first;
+    final p = s.turn;
+    var best = ms.first;
+    var bv = -1e9;
+    for (final m in ms) {
+      final c = s.copy();
+      apply(c, m);
+      var guard = 0;
+      while (c.turn == p && !isOver(c) && !needsChance(c) && guard++ < 4) {
+        final next = moves(c);
+        if (next.isEmpty || next.first == kPass) break;
+        var nb = next.first;
+        var nv = -1e9;
+        for (final x in next) {
+          final d = c.copy();
+          apply(d, x);
+          final v = isOver(d) ? 1e6 : evaluate(d, p);
+          if (v > nv) {
+            nv = v;
+            nb = x;
+          }
+        }
+        apply(c, nb);
+      }
+      final v = (isOver(c) && winner(c) == p ? 1e6 : evaluate(c, p)) + r.nextDouble() * noise * 25;
+      if (v > bv) {
+        bv = v;
+        best = m;
+      }
+    }
+    return best;
+  }
+
   @override
   String status(TavlaState s, String lang) {
     return '● ${pips(s, 0)}  ·  ○ ${pips(s, 1)}';

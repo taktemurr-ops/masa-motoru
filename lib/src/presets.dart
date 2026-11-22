@@ -75,8 +75,8 @@ class MasaPresets {
   static BoardGameRules chess(String id, [ChessVariant v = ChessVariant.standard]) => BoardGameRules(
         gameId: id,
         rulesFor: (_) => ChessRules(v),
-        opponentFor: (d) => Opponent(const [1, 1, 2, 2, 2, 3, 3, 3, 4, 4][d - 1], 6000, const [1.0, 0.85, 0.7, 0.55, 0.4, 0.3, 0.2, 0.12, 0.06, 0.03][d - 1]),
-        solverFor: (_) => const Opponent(4, 12000, 0),
+        opponentFor: (d) => Opponent(const [1, 1, 2, 2, 2, 3, 3, 3, 4, 4][d - 1], 4000, const [1.0, 0.85, 0.7, 0.55, 0.4, 0.3, 0.2, 0.12, 0.06, 0.03][d - 1]),
+        solverFor: (_) => const Opponent(4, 6000, 0),
         openingFor: (d) => d <= 3 ? 0 : 2,
       );
 
@@ -99,8 +99,8 @@ class MasaPresets {
   static BoardGameRules go(String id) => BoardGameRules(
         gameId: id,
         rulesFor: (d) => GoRules(d <= 7 ? 9 : 13),
-        opponentFor: (d) => Opponent(const [1, 1, 1, 2, 2, 2, 2, 2, 3, 3][d - 1], 3000, const [1.0, 0.85, 0.7, 0.6, 0.45, 0.35, 0.25, 0.18, 0.1, 0.05][d - 1]),
-        solverFor: (_) => const Opponent(2, 6000, 0),
+        opponentFor: (d) => Opponent(const [1, 1, 1, 2, 2, 2, 2, 2, 3, 3][d - 1], 1500, const [1.0, 0.85, 0.7, 0.6, 0.45, 0.35, 0.25, 0.18, 0.1, 0.05][d - 1]),
+        solverFor: (_) => const Opponent(2, 3000, 0),
         openingFor: (d) => 0,
         humanSeatFor: (_) => 0,
       );
