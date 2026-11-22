@@ -8,7 +8,6 @@ import 'board_view.dart';
 import 'grid_state.dart';
 import 'skins.dart';
 
-const _wood = Color(0xFFDDB777);
 const _woodDark = Color(0xFF6B4A22);
 const _pegs = [Color(0xFFC0392B), Color(0xFF2E6FB0)];
 
@@ -81,7 +80,6 @@ class HalmaSkin extends BoardSkin {
 /// Altı köşeli yıldız tahta (eksenel koordinat, 17×17 ızgara).
 class StarSkin extends BoardSkin {
   const StarSkin();
-  static const _ptColors = [Color(0xFFF6D7D3), Color(0xFFD8E6F5), Color(0xFFE9E3F3), Color(0xFFDDEFD9), Color(0xFFF7EBC9), Color(0xFFF3DCEB)];
 
   @override
   double aspect(BoardState s) => 13 / 14.9;
