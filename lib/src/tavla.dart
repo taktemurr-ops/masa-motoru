@@ -1,0 +1,337 @@
+import 'package:studio_core/core/rng.dart';
+
+import 'board_game.dart';
+import 'grid_state.dart';
+
+/// Tavla (ve çeşitleri). cells: 0..23 noktalar (pozitif: oyuncu 0'ın pulu,
+/// negatif: oyuncu 1), 24 oyuncu 0 kırık, 25 oyuncu 1 kırık, 26/27 toplanan.
+/// Oyuncu 0 23 → 0 yönünde, oyuncu 1 0 → 23 yönünde ilerler.
+/// vars: [0] bitti, [1..4] kalan zarlar (0 kullanıldı), [5] zar atıldı mı,
+/// [6] kazanç tipi (1 tek, 2 mars, 3 katmerli mars), [7] sıkıştırılan (Plakoto)
+/// noktaların bit kümesi değil; Plakoto için ayrıca pins listesi tutulur.
+enum TavlaVariant { tavla, plakoto, fevga }
+
+class TavlaState extends GridState {
+  /// Plakoto: noktada altta sıkışmış rakip pulun sahibi (+1: oyuncu 0, -1: oyuncu 1, 0 yok).
+  final List<int> pins;
+  TavlaState(List<int> cells, List<int> vars, this.pins) : super(28, 1, cells, vars);
+
+  @override
+  TavlaState copy() => copyBase(TavlaState(List.of(cells), List.of(vars), List.of(pins)));
+
+  @override
+  Map<String, Object?> toJson() => {...super.toJson(), 'pn': pins};
+}
+
+class TavlaRules extends BoardRules<TavlaState> {
+  final TavlaVariant variant;
+  const TavlaRules([this.variant = TavlaVariant.tavla]);
+
+  @override
+  String get id => 'tavla-${variant.name}';
+
+  @override
+  bool get stochastic => true;
+
+  @override
+  int get maxPly => 600;
+
+  static const bar0 = 24, bar1 = 25, off0 = 26, off1 = 27;
+
+  @override
+  TavlaState initial(SeededRandom r) {
+    final c = List.filled(28, 0);
+    switch (variant) {
+      case TavlaVariant.tavla:
+        c[23] = 2;
+        c[12] = 5;
+        c[7] = 3;
+        c[5] = 5;
+        c[0] = -2;
+        c[11] = -5;
+        c[16] = -3;
+        c[18] = -5;
+      case TavlaVariant.plakoto:
+        c[23] = 15;
+        c[0] = -15;
+      case TavlaVariant.fevga:
+        // Fevga: iki taraf da aynı yönde, karşı köşelerden başlar.
+        c[23] = 15;
+        c[11] = -15;
+    }
+    final s = TavlaState(c, List.filled(8, 0), List.filled(24, 0));
+    // İlk atış: zarlar eşit gelmezse büyük atan başlar (zarlarını kullanır).
+    var a = 0, b = 0;
+    while (a == b) {
+      a = 1 + r.nextInt(6);
+      b = 1 + r.nextInt(6);
+    }
+    s.turn = a > b ? 0 : 1;
+    _setDice(s, a, b);
+    return s;
+  }
+
+  void _setDice(TavlaState s, int a, int b) {
+    s.vars[5] = 1;
+    if (a == b) {
+      for (var i = 1; i <= 4; i++) {
+        s.vars[i] = a;
+      }
+    } else {
+      s.vars[1] = a;
+      s.vars[2] = b;
+      s.vars[3] = 0;
+      s.vars[4] = 0;
+    }
+  }
+
+  @override
+  bool needsChance(TavlaState s) => !isOver(s) && s.vars[5] == 0;
+
+  @override
+  void applyChance(TavlaState s, SeededRandom r) => _setDice(s, 1 + r.nextInt(6), 1 + r.nextInt(6));
+
+  int sign(int p) => p == 0 ? 1 : -1;
+  int mine(TavlaState s, int i, int p) => i < 24 ? (s.cells[i] * sign(p)).clamp(0, 15) : 0;
+  int theirs(TavlaState s, int i, int p) => i < 24 ? (-s.cells[i] * sign(p)).clamp(0, 15) : 0;
+
+  /// Oyuncunun yolundaki sıra (0 = başlangıç, 23 = son nokta).
+  int progress(int i, int p) {
+    if (variant == TavlaVariant.fevga && p == 1) return (11 - i + 24) % 24;
+    return p == 0 ? 23 - i : i;
+  }
+
+  /// Yoldaki sıradan nokta.
+  int pointAt(int prog, int p) {
+    if (variant == TavlaVariant.fevga && p == 1) return (11 - prog + 24) % 24;
+    return p == 0 ? 23 - prog : prog;
+  }
+
+  bool allHome(TavlaState s, int p) {
+    if (s.cells[p == 0 ? bar0 : bar1] > 0) return false;
+    for (var i = 0; i < 24; i++) {
+      if (mine(s, i, p) > 0 && progress(i, p) < 18) return false;
+    }
+    if (variant == TavlaVariant.plakoto) {
+      for (var i = 0; i < 24; i++) {
+        if (s.pins[i] == sign(p) && progress(i, p) < 18) return false;
+      }
+    }
+    return true;
+  }
+
+  bool _canLand(TavlaState s, int to, int p) {
+    final t = theirs(s, to, p);
+    switch (variant) {
+      case TavlaVariant.tavla:
+        return t <= 1;
+      case TavlaVariant.plakoto:
+        return t == 0 || (t == 1 && s.pins[to] == 0);
+      case TavlaVariant.fevga:
+        return t == 0;
+    }
+  }
+
+  /// Tek zar için yasal adımlar: (from, to).
+  List<(int, int)> _steps(TavlaState s, int p, int die) {
+    final out = <(int, int)>[];
+    final bar = p == 0 ? bar0 : bar1;
+    if (variant == TavlaVariant.tavla && s.cells[bar] > 0) {
+      final to = pointAt(die - 1, p);
+      if (_canLand(s, to, p)) out.add((bar, to));
+      return out;
+    }
+    final home = allHome(s, p);
+    for (var i = 0; i < 24; i++) {
+      if (mine(s, i, p) == 0) continue;
+      final prog = progress(i, p) + die;
+      if (prog <= 23) {
+        final to = pointAt(prog, p);
+        if (_canLand(s, to, p)) out.add((i, to));
+      } else if (home) {
+        // Toplama: tam zar ya da en arkadaki pul büyük zarla.
+        var further = false;
+        for (var j = 0; j < 24; j++) {
+          if (mine(s, j, p) > 0 && progress(j, p) < progress(i, p)) further = true;
+        }
+        if (prog == 24 || !further) out.add((i, p == 0 ? off0 : off1));
+      }
+    }
+    return out;
+  }
+
+  List<int> dice(TavlaState s) => _dice(s);
+  List<int> _dice(TavlaState s) => [for (var i = 1; i <= 4; i++) if (s.vars[i] > 0) s.vars[i]];
+
+  /// En uzun kullanılabilen zar dizisi.
+  int _maxUse(TavlaState s, int depth) {
+    if (depth == 0) return 0;
+    var best = 0;
+    final seen = <int>{};
+    for (final d in _dice(s)) {
+      if (!seen.add(d)) continue;
+      for (final (f, t) in _steps(s, s.turn, d)) {
+        final c = s.copy();
+        _do(c, f, t, d);
+        final v = 1 + _maxUse(c, depth - 1);
+        if (v > best) best = v;
+        if (best == depth) return best;
+      }
+    }
+    return best;
+  }
+
+  @override
+  List<int> moves(TavlaState s) {
+    if (isOver(s) || needsChance(s)) return const [];
+    final dice = _dice(s);
+    if (dice.isEmpty) return const [kPass];
+    final need = _maxUse(s, dice.length);
+    if (need == 0) return const [kPass];
+    final out = <int>[];
+    final seen = <int>{};
+    var maxDie = 0;
+    for (final d in dice) {
+      if (!seen.add(d)) continue;
+      for (final (f, t) in _steps(s, s.turn, d)) {
+        final c = s.copy();
+        _do(c, f, t, d);
+        if (1 + _maxUse(c, dice.length - 1) >= need) {
+          out.add(mv(f, t, d));
+          if (d > maxDie) maxDie = d;
+        }
+      }
+    }
+    // Yalnız bir zar oynanabiliyorsa büyük olan oynanır.
+    if (need == 1 && dice.length == 2 && dice[0] != dice[1]) {
+      final big = out.where((m) => mvExtra(m) == maxDie).toList();
+      if (big.isNotEmpty) return big;
+    }
+    return out.isEmpty ? const [kPass] : out;
+  }
+
+  void _do(TavlaState s, int f, int t, int die) {
+    final p = s.turn;
+    final sg = sign(p);
+    if (f >= 24) {
+      s.cells[f]--;
+    } else {
+      s.cells[f] -= sg;
+      if (variant == TavlaVariant.plakoto && s.cells[f] == 0 && s.pins[f] != 0) {
+        // Sıkışan pul serbest kalır.
+        s.cells[f] = s.pins[f];
+        s.pins[f] = 0;
+      }
+    }
+    if (t >= 26) {
+      s.cells[t]++;
+    } else {
+      if (theirs(s, t, p) == 1) {
+        if (variant == TavlaVariant.tavla) {
+          s.cells[t] = 0;
+          s.cells[p == 0 ? bar1 : bar0]++;
+        } else if (variant == TavlaVariant.plakoto) {
+          s.pins[t] = -sg;
+          s.cells[t] = 0;
+        }
+      }
+      s.cells[t] += sg;
+    }
+    for (var i = 1; i <= 4; i++) {
+      if (s.vars[i] == die) {
+        s.vars[i] = 0;
+        break;
+      }
+    }
+  }
+
+  @override
+  void apply(TavlaState s, int m) {
+    final p = s.turn;
+    s.ply++;
+    if (m == kPass) {
+      for (var i = 1; i <= 4; i++) {
+        s.vars[i] = 0;
+      }
+    } else {
+      _do(s, mvFrom(m), mvTo(m), mvExtra(m));
+      s.last = mvTo(m);
+    }
+    if (s.cells[p == 0 ? off0 : off1] >= 15) {
+      s.vars[0] = 1;
+      final o = 1 - p;
+      var type = 1;
+      if (s.cells[o == 0 ? off0 : off1] == 0) {
+        type = 2;
+        var back = s.cells[o == 0 ? bar0 : bar1] > 0;
+        for (var i = 0; i < 24; i++) {
+          if (mine(s, i, o) > 0 && progress(i, o) < 6) back = true;
+        }
+        if (back && variant == TavlaVariant.tavla) type = 3;
+      }
+      s.vars[6] = type;
+      s.vars[7] = p;
+      return;
+    }
+    if (_dice(s).isEmpty) {
+      s.turn = 1 - p;
+      s.vars[5] = 0;
+    } else if (m != kPass && _maxUse(s, 1) == 0) {
+      // Kalan zar oynanamıyor: sıra geçer.
+      for (var i = 1; i <= 4; i++) {
+        s.vars[i] = 0;
+      }
+      s.turn = 1 - p;
+      s.vars[5] = 0;
+    } else if (m == kPass) {
+      s.turn = 1 - p;
+      s.vars[5] = 0;
+    }
+  }
+
+  @override
+  bool isOver(TavlaState s) => s.vars[0] == 1;
+
+  @override
+  int winner(TavlaState s) => isOver(s) ? s.vars[7] : -1;
+
+  int pips(TavlaState s, int p) {
+    var n = s.cells[p == 0 ? bar0 : bar1] * 25;
+    for (var i = 0; i < 24; i++) {
+      n += mine(s, i, p) * (24 - progress(i, p));
+    }
+    if (variant == TavlaVariant.plakoto) {
+      for (var i = 0; i < 24; i++) {
+        if (s.pins[i] == sign(p)) n += 24 - progress(i, p) + 10;
+      }
+    }
+    return n;
+  }
+
+  @override
+  double evaluate(TavlaState s, int player) {
+    final o = 1 - player;
+    var v = (pips(s, o) - pips(s, player)) * 0.6;
+    for (var i = 0; i < 24; i++) {
+      final a = mine(s, i, player), b = mine(s, i, o);
+      if (a == 1) v -= variant == TavlaVariant.fevga ? 0 : 2.5 * (progress(i, player) > 12 ? 1.4 : 1);
+      if (a >= 2) v += 1.5;
+      if (b == 1) v += variant == TavlaVariant.fevga ? 0 : 2;
+      if (b >= 2) v -= 1.2;
+    }
+    v += (s.cells[player == 0 ? off0 : off1] - s.cells[o == 0 ? off0 : off1]) * 3;
+    return v;
+  }
+
+  @override
+  String status(TavlaState s, String lang) {
+    return '● ${pips(s, 0)}  ·  ○ ${pips(s, 1)}';
+  }
+
+  @override
+  TavlaState fromJson(Map<String, dynamic> j) {
+    final s = TavlaState(intList(j['g']), intList(j['v']), intList(j['pn']));
+    s.readBase(j);
+    return s;
+  }
+}

@@ -5,6 +5,7 @@ import 'draughts.dart';
 import 'go.dart';
 import 'mancala.dart';
 import 'morris.dart';
+import 'tavla.dart';
 import 'line_games.dart';
 import 'reversi.dart';
 
@@ -100,5 +101,13 @@ class MasaPresets {
         solverFor: (_) => const Opponent(2, 6000, 0),
         openingFor: (d) => 0,
         humanSeatFor: (_) => 0,
+      );
+
+  static BoardGameRules tavla(String id, [TavlaVariant v = TavlaVariant.tavla]) => BoardGameRules(
+        gameId: id,
+        rulesFor: (_) => TavlaRules(v),
+        opponentFor: (d) => Opponent(const [1, 1, 1, 2, 2, 2, 3, 3, 4, 4][d - 1], 0, const [1.0, 0.8, 0.65, 0.5, 0.4, 0.3, 0.2, 0.12, 0.06, 0.02][d - 1]),
+        solverFor: (_) => const Opponent(4, 0, 0),
+        openingFor: (d) => 0,
       );
 }

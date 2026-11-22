@@ -32,7 +32,7 @@ class MancalaRules extends BoardRules<GridState> {
 
   int store(int p) => p == 0 ? pits : 2 * pits + 1;
   int get total => 2 * pits * seeds;
-  bool own(int i, int p) => p == 0 ? i < pits : (i > pits && i < 2 * pits + 1);
+  bool own(int i, int p) => i >= 0 && (p == 0 ? i < pits : (i > pits && i < 2 * pits + 1));
   int opposite(int i) => 2 * pits - i;
 
   @override

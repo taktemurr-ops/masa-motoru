@@ -19,6 +19,9 @@ void main() {
     'oware': MasaPresets.mancala('oyun-oware', MancalaRules.oware),
     'dokuz-tas': MasaPresets.morris('oyun-dokuz-tas'),
     'go': MasaPresets.go('oyun-go'),
+    'tavla': MasaPresets.tavla('oyun-tavla'),
+    'plakoto': MasaPresets.tavla('oyun-plakoto', TavlaVariant.plakoto),
+    'fevga': MasaPresets.tavla('oyun-fevga', TavlaVariant.fevga),
   };
 
   games.forEach((name, rules) {

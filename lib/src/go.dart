@@ -19,6 +19,9 @@ class GoRules extends BoardRules<GridState> {
   int get maxPly => n * n * 3;
 
   @override
+  double get decisive => n * n * 0.7;
+
+  @override
   GridState initial(SeededRandom r) => GridState(n, n, List.filled(n * n, -1));
 
   List<int> nb(int i) {

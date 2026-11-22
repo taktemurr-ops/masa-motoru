@@ -52,6 +52,9 @@ class DraughtsRules extends BoardRules<GridState> {
   @override
   int get maxPly => 260;
 
+  @override
+  double get decisive => 55;
+
   bool playable(int c, int r) => orthogonal || (r + c) % 2 == 1;
 
   @override

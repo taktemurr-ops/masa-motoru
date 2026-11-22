@@ -27,6 +27,9 @@ class ChessRules extends BoardRules<GridState> {
   @override
   int get maxPly => 300;
 
+  @override
+  double get decisive => variant == ChessVariant.antichess ? double.infinity : 110;
+
   static const _knight = [(1, 2), (2, 1), (-1, 2), (-2, 1), (1, -2), (2, -1), (-1, -2), (-2, -1)];
   static const _king = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)];
   static const _rook = [(1, 0), (-1, 0), (0, 1), (0, -1)];

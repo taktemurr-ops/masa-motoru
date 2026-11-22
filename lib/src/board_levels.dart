@@ -136,7 +136,10 @@ class BoardGameRules extends GameRules<BoardLevel> {
   }
 
   /// Bütün maçı oynat: oyuncu koltuğunda [solver], diğerlerinde bölümün rakibi.
-  static BoardState simulate(BoardLevel l, {Opponent? solver, int seed = 11}) {
+  static BoardState simulate(BoardLevel l, {Opponent? solver, int seed = 11}) => simulateJudged(l, solver: solver, seed: seed).$1;
+
+  /// Maçı oynat; ikinci değer: üstünlük eşiği aşılarak erken kazanıldı mı.
+  static (BoardState, bool) simulateJudged(BoardLevel l, {Opponent? solver, int seed = 11}) {
     final rules = l.rules;
     final s = l.start.copy();
     final r = SeededRandom(mixSeed([l.seed, seed]));
@@ -151,14 +154,16 @@ class BoardGameRules extends GameRules<BoardLevel> {
       }
       final ai = s.turn == l.human ? me : opp;
       rules.apply(s, ai.choose(s));
+      if (rules.decisive.isFinite && s.ply > 16 && rules.evaluate(s, l.human) >= rules.decisive) return (s, true);
     }
-    return s;
+    return (s, false);
   }
 
   @override
   Validation validate(BoardLevel level, LevelSpec spec) {
     if (level.rules.isOver(level.start)) return const Validation.fail('over at start');
-    final end = simulate(level, solver: solverFor(level.difficulty));
+    final (end, judged) = simulateJudged(level, solver: solverFor(level.difficulty));
+    if (judged) return Validation.ok(end.ply);
     if (!level.rules.isOver(end) && end.ply < level.rules.maxPly) return const Validation.fail('did not finish');
     if (!level.goalMet(end)) return const Validation.fail('goal not reached');
     return Validation.ok(end.ply);

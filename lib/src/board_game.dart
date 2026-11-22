@@ -79,6 +79,10 @@ abstract class BoardRules<S extends BoardState> {
   bool needsChance(S s) => false;
   void applyChance(S s, SeededRandom r) {}
 
+  /// Doğrulamada erken karar: oyuncunun değerlendirmesi bu eşiği geçerse
+  /// (uzun oyunlarda) maç kazanılmış sayılır.
+  double get decisive => double.infinity;
+
   /// Sonsuz oyunlara karşı: bu kadar hamleden sonra berabere sayılır.
   int get maxPly => 400;
 
