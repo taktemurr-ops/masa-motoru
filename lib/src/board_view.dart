@@ -128,11 +128,15 @@ class _BoardViewState extends State<BoardView> {
     });
     final m = _match;
     if (m != null) {
+      // Maça geri dönüş: o ana kadarki hamleler beklemeden yeniden oynanır.
+      _inbox.addAll(m.history);
       _sub = m.moves.listen((e) {
         _inbox.add(e);
         final w = _wake;
         _wake = null;
         w?.complete();
+        // Koltuğumuz bir süre bota kaldıysa onun hamlesi sıradaki yerel hamledir.
+        if (mounted && !_ended && e.$1 == s.turn && _isLocal(s.turn) && !_busy && !rules.needsChance(s)) _advance();
       });
     }
     WidgetsBinding.instance.addPostFrameCallback((_) => _advance());
@@ -171,11 +175,18 @@ class _BoardViewState extends State<BoardView> {
       }
       if (rules.needsChance(s)) {
         setState(() => _busy = true);
-        await Future<void>.delayed(const Duration(milliseconds: 450));
+        if (_inbox.isEmpty) await Future<void>.delayed(const Duration(milliseconds: 450));
         if (!mounted) return;
         final ch = _chance;
         setState(() => rules.applyChance(s, ch));
         ctx.sfx(Sfx.tap);
+        continue;
+      }
+      // Sıradaki koltuğun hamlesi zaten geldiyse (geri dönüş ya da devralma) uygula.
+      final q = _inbox.indexWhere((e) => e.$1 == s.turn);
+      if (q >= 0) {
+        final rm = int.tryParse(_inbox.removeAt(q).$2);
+        if (rm != null && rules.moves(s).contains(rm)) setState(() => rules.apply(s, rm));
         continue;
       }
       if (_isLocal(s.turn)) {
