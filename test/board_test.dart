@@ -22,6 +22,11 @@ void main() {
     'tavla': MasaPresets.tavla('oyun-tavla'),
     'plakoto': MasaPresets.tavla('oyun-plakoto', TavlaVariant.plakoto),
     'fevga': MasaPresets.tavla('oyun-fevga', TavlaVariant.fevga),
+    'kizma': MasaPresets.kizma('oyun-kizma-birader'),
+    'yilan': MasaPresets.snakes('oyun-yilan-merdiven'),
+    'zar-besli': MasaPresets.zarBesli('oyun-zar-beslisi'),
+    'farkle': MasaPresets.farkle('oyun-farkle'),
+    'yalanci': MasaPresets.liar('oyun-yalanci-zari'),
   };
 
   games.forEach((name, rules) {
@@ -101,5 +106,14 @@ void main() {
     expect(DraughtsRules.english.moves(DraughtsRules.english.initial(SeededRandom(1))).length, 7);
     expect(DraughtsRules.turkish.moves(DraughtsRules.turkish.initial(SeededRandom(1))).length, 8);
     expect(DraughtsRules.international.moves(DraughtsRules.international.initial(SeededRandom(1))).length, 9);
+  });
+
+  test('farkle puanları', () {
+    expect(FarkleRules.scoreOf([1, 1, 1]), 1000);
+    expect(FarkleRules.scoreOf([5]), 50);
+    expect(FarkleRules.scoreOf([1, 2, 3, 4, 5, 6]), 1500);
+    expect(FarkleRules.scoreOf([2]), -1);
+    expect(ZarBesliRules.score([2, 3, 4, 5, 1], 10), 40);
+    expect(ZarBesliRules.score([3, 3, 3, 5, 5], 8), 25);
   });
 }

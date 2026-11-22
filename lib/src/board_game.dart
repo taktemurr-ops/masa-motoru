@@ -74,6 +74,10 @@ abstract class BoardRules<S extends BoardState> {
   /// Büyük tahtalarda aramaya sokulacak aday hamleler.
   List<int> searchMoves(S s) => moves(s);
 
+  /// Elle yazılmış oyun politikası (zar oyunları gibi aramanın pahalı ya da
+  /// anlamsız olduğu yerlerde). [noise] 0 güçlü, 1 zayıf. null: arama kullan.
+  int? policy(S s, double noise, SeededRandom r) => null;
+
   /// Zar gibi şans olayları.
   bool get stochastic => false;
   bool needsChance(S s) => false;

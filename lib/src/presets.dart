@@ -6,6 +6,8 @@ import 'go.dart';
 import 'mancala.dart';
 import 'morris.dart';
 import 'tavla.dart';
+import 'dice_games.dart';
+import 'race_games.dart';
 import 'line_games.dart';
 import 'reversi.dart';
 
@@ -109,5 +111,52 @@ class MasaPresets {
         opponentFor: (d) => Opponent(const [1, 1, 1, 2, 2, 2, 3, 3, 4, 4][d - 1], 0, const [1.0, 0.8, 0.65, 0.5, 0.4, 0.3, 0.2, 0.12, 0.06, 0.02][d - 1]),
         solverFor: (_) => const Opponent(4, 0, 0),
         openingFor: (d) => 0,
+      );
+
+  static Opponent _noisy(int d) => Opponent(2, 0, const [1.0, 0.85, 0.7, 0.55, 0.45, 0.35, 0.25, 0.15, 0.08, 0.03][d - 1]);
+
+  static BoardGameRules kizma(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (d) => KizmaRules(d <= 3 ? 2 : (d <= 6 ? 3 : 4)),
+        opponentFor: _noisy,
+        solverFor: (_) => const Opponent(2, 0, 0),
+        openingFor: (d) => 0,
+        humanSeatFor: (_) => 0,
+      );
+
+  static BoardGameRules snakes(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (d) => SnakesRules(d <= 4 ? 2 : (d <= 7 ? 3 : 4)),
+        opponentFor: _noisy,
+        solverFor: (_) => const Opponent(2, 0, 0),
+        openingFor: (d) => 0,
+        humanSeatFor: (_) => 0,
+      );
+
+  static BoardGameRules zarBesli(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (_) => const ZarBesliRules(),
+        opponentFor: _noisy,
+        solverFor: (_) => const Opponent(2, 0, 0),
+        openingFor: (d) => 0,
+        humanSeatFor: (_) => 0,
+      );
+
+  static BoardGameRules farkle(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (d) => FarkleRules(d <= 3 ? 2000 : (d <= 6 ? 3000 : 4000)),
+        opponentFor: _noisy,
+        solverFor: (_) => const Opponent(2, 0, 0),
+        openingFor: (d) => 0,
+        humanSeatFor: (_) => 0,
+      );
+
+  static BoardGameRules liar(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (d) => LiarRules(d <= 4 ? 2 : (d <= 7 ? 3 : 4)),
+        opponentFor: _noisy,
+        solverFor: (_) => const Opponent(2, 0, 0),
+        openingFor: (d) => 0,
+        humanSeatFor: (_) => 0,
       );
 }

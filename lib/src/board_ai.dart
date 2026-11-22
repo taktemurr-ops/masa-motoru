@@ -21,6 +21,8 @@ class BoardAI<S extends BoardState> {
   int choose(S s) {
     final all = rules.moves(s);
     if (all.length == 1) return all.first;
+    final pol = rules.policy(s, noise, r);
+    if (pol != null) return pol;
     if (rules.stochastic || rules.players > 2) return _simulate(s, all);
     final me = s.turn;
     var cand = rules.searchMoves(s);
