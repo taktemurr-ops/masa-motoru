@@ -378,7 +378,7 @@ const sP = 1, sL = 2, sN = 3, sS = 4, sG = 5, sB = 6, sR = 7, sK = 8;
 int sColor(int v) => v < 0 ? -1 : v ~/ 16;
 int sType(int v) => v < 0 ? 0 : v % 16;
 int sBase(int t) => t <= 8 ? t : const [0, 1, 2, 3, 4, 6, 7][t - 8];
-int sPromote(int t) => const [0, 9, 10, 11, 12, 0, 13, 14, 0][t];
+int sPromote(int t) => t <= 8 ? const [0, 9, 10, 11, 12, 0, 13, 14, 0][t] : 0;
 
 class ShogiRules extends BoardRules<GridState> {
   final int n;
