@@ -29,7 +29,7 @@ class MasaPresets {
         goalFor: (d) => d <= 4 ? BoardGoal.win : BoardGoal.notLose,
         openingFor: (d) => 0,
         humanSeatFor: (d) => d <= 4 ? 0 : null,
-        levels: 50000,
+        levels: 100000,
       );
 
   static BoardGameRules dortle(String id) => BoardGameRules(

@@ -70,7 +70,7 @@ class BoardGameRules extends GameRules<BoardLevel> {
     BoardGoal Function(int d)? goalFor,
     int Function(int d)? openingFor,
     int? Function(int d)? humanSeatFor,
-    this.levels = 50000,
+    this.levels = 100000,
     this.stats = const [
       GameStat('games_won', 'Kazanılan oyun', 'Games won', scale: 10),
       GameStat('moves_made', 'Yapılan hamle', 'Moves made', scale: 100),
