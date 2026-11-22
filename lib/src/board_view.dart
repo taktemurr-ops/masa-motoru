@@ -302,7 +302,7 @@ class _BoardViewState extends State<BoardView> {
       final me = _viewer;
       final iWon = _match != null ? w == me : w >= 0;
       ctx.sfx(iWon ? Sfx.win : Sfx.lose);
-      unawaited(_match?.finish(w));
+      unawaited(_match?.finish(w, iWon: iWon));
       ctx.finish(RoundResult(
         won: iWon,
         score: iWon ? 300 : 30,
