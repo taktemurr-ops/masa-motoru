@@ -294,7 +294,7 @@ void main() {
     expect(s.vars[1 + who], 1);
   });
 
-  int perft(ChessRules r, GridState s, int d) {
+  int perft(BoardRules<GridState> r, GridState s, int d) {
     if (d == 0) return 1;
     var n = 0;
     for (final m in r.moves(s)) {
