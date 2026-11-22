@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'board_game.dart';
 import 'board_view.dart';
+import 'corner_place.dart';
 import 'east_chess.dart';
 import 'grid_state.dart';
 import 'skins.dart';
@@ -282,4 +283,173 @@ class ShogiSkin extends BoardSkin {
 
   @override
   void paintSeat(Canvas c, Rect r, int seat, BoardPaintInfo info) => drawPiece(c, r, sK, seat != info.human && info.human >= 0);
+}
+
+/// Köşe yerleştirme: üstte tahta, altta oyuncunun taş kutusu, en altta
+/// döndür / çevir düğmeleri. Seçili taşın yönelimi burada tutulur.
+class CornerSkin extends BoardSkin {
+  const CornerSkin();
+  static const colors = [Color(0xFF1F9E89), Color(0xFFE4572E)];
+  static final List<int> _orient = List.filled(21, 0);
+  static int _last = -1;
+
+  static const _cols = 7, _trayRows = 3;
+  static const _trayH = 6.0, _btnH = 1.6;
+
+  CornerRules _r(GridState s) => CornerRules(s.cols);
+
+  @override
+  double aspect(BoardState s) {
+    final n = (s as GridState).cols;
+    return n / (n + _trayH + _btnH);
+  }
+
+  double _u(Size size, int n) => size.width / n;
+
+  int _viewer(BoardPaintInfo? info) => (info?.human ?? 0) == 1 ? 1 : 0;
+
+  Rect _box(Size size, int n, int k) {
+    final u = _u(size, n), bw = n * u / _cols, bh = _trayH * u / _trayRows;
+    return Rect.fromLTWH((k % _cols) * bw, n * u + (k ~/ _cols) * bh, bw, bh);
+  }
+
+  Rect _button(Size size, int n, int k) {
+    final u = _u(size, n);
+    final top = (n + _trayH) * u;
+    return Rect.fromLTWH(size.width * (k == 0 ? 0.1 : 0.55), top + u * 0.2, size.width * 0.35, (_btnH - 0.4) * u);
+  }
+
+  static void _cell(Canvas c, Rect r, Color col) {
+    c.drawRRect(RRect.fromRectAndRadius(r.deflate(r.width * 0.04), Radius.circular(r.width * 0.18)), Paint()..color = col);
+    c.drawRRect(
+        RRect.fromRectAndRadius(r.deflate(r.width * 0.2), Radius.circular(r.width * 0.12)),
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.18)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = math.max(1, r.width * 0.08));
+  }
+
+  @override
+  void paint(Canvas c, Size size, BoardState st, BoardPaintInfo info) {
+    final s = st as GridState;
+    final n = s.cols;
+    final rules = _r(s);
+    final viewer = _viewer(info);
+    final u = _u(size, n);
+    final sel = info.selected;
+    if (sel != null && sel >= rules.trayBase) {
+      final (_, piece, o) = rules.fromTray(sel);
+      _last = piece;
+      _orient[piece] = o;
+    }
+    c.drawRRect(RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(10)), Paint()..color = const Color(0xFF23262E));
+    final lastCells = s.vars[2] > 0 ? rules.cellsOf(mv(s.vars[2] - 1, s.vars[3] - 1)).toSet() : const <int>{};
+    for (var i = 0; i < n * n; i++) {
+      final r = Rect.fromLTWH((i % n) * u, (i ~/ n) * u, u, u);
+      final v = s.cells[i];
+      c.drawRect(r.deflate(0.5), Paint()..color = const Color(0xFF353A45));
+      if (v >= 0) {
+        _cell(c, r, colors[v]);
+        if (lastCells.contains(i)) c.drawRect(r.deflate(u * 0.38), Paint()..color = kHighlight);
+      } else {
+        for (final p in const [0, 1]) {
+          if (i == rules.start(p) && !s.cells.take(n * n).contains(p)) {
+            c.drawCircle(r.center, u * 0.28, Paint()..color = colors[p].withValues(alpha: 0.7));
+          }
+        }
+      }
+      if (info.targets.contains(i)) drawTarget(c, r.center, u * 0.2);
+      if (info.hintTo == i) drawHint(c, r);
+    }
+    // İpucu: seçili taşın önerilen yerine soluk önizleme.
+    final ht = info.hintTo;
+    if (sel != null && sel >= rules.trayBase && ht != null && info.targets.contains(ht)) {
+      final t = ht;
+      for (final i in rules.cellsOf(mv(sel, t))) {
+        c.drawRect(Rect.fromLTWH((i % n) * u, (i ~/ n) * u, u, u).deflate(u * 0.08), Paint()..color = colors[viewer].withValues(alpha: 0.35));
+      }
+    }
+    // Taş kutusu.
+    for (var k = 0; k < 21; k++) {
+      final box = _box(size, n, k);
+      final avail = rules.has(s, viewer, k);
+      final o = _orient[k];
+      final selected = sel != null && sel >= rules.trayBase && rules.fromTray(sel).$2 == k;
+      c.drawRRect(RRect.fromRectAndRadius(box.deflate(3), const Radius.circular(8)),
+          Paint()..color = selected ? const Color(0x664CAF50) : (k == _last ? const Color(0x22FFFFFF) : const Color(0x11FFFFFF)));
+      if (!avail) continue;
+      final shape = cornerShape(k, o);
+      var w = 0, h = 0;
+      for (final (x, y) in shape) {
+        if (x > w) w = x;
+        if (y > h) h = y;
+      }
+      final cs = math.min(box.width, box.height) * 0.8 / 5;
+      final ox = box.center.dx - (w + 1) * cs / 2, oy = box.center.dy - (h + 1) * cs / 2;
+      for (final (x, y) in shape) {
+        _cell(c, Rect.fromLTWH(ox + x * cs, oy + y * cs, cs, cs), colors[viewer]);
+      }
+      final hf = info.hintFrom;
+      if (hf != null && hf >= rules.trayBase && rules.fromTray(hf).$2 == k) drawHint(c, box);
+    }
+    // Rakibin kalan taş sayısı ve düğmeler.
+    for (final k in const [0, 1]) {
+      final r = _button(size, n, k);
+      c.drawRRect(RRect.fromRectAndRadius(r, Radius.circular(r.height / 2)), Paint()..color = _last >= 0 ? const Color(0xFF3E4452) : const Color(0xFF2B2F38));
+      final ic = r.center, rad = r.height * 0.28;
+      final pen = Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = math.max(2, rad * 0.25)
+        ..strokeCap = StrokeCap.round;
+      if (k == 0) {
+        c.drawArc(Rect.fromCircle(center: ic, radius: rad), -math.pi * 0.4, math.pi * 1.6, false, pen);
+        final tip = ic + Offset(math.cos(-math.pi * 0.4), math.sin(-math.pi * 0.4)) * rad;
+        c.drawLine(tip, tip + Offset(-rad * 0.5, -rad * 0.15), pen);
+        c.drawLine(tip, tip + Offset(-rad * 0.1, rad * 0.5), pen);
+      } else {
+        c.drawLine(ic + Offset(0, -rad), ic + Offset(0, rad), pen);
+        c.drawLine(ic + Offset(-rad * 0.3, -rad * 0.6), ic + Offset(-rad * 1.2, 0), pen);
+        c.drawLine(ic + Offset(-rad * 1.2, 0), ic + Offset(-rad * 0.3, rad * 0.6), pen);
+        c.drawLine(ic + Offset(rad * 0.3, -rad * 0.6), ic + Offset(rad * 1.2, 0), pen);
+        c.drawLine(ic + Offset(rad * 1.2, 0), ic + Offset(rad * 0.3, rad * 0.6), pen);
+      }
+    }
+  }
+
+  @override
+  int hit(Offset p, Size size, BoardState st, [BoardPaintInfo? info]) {
+    final s = st as GridState;
+    final n = s.cols;
+    final rules = _r(s);
+    final viewer = _viewer(info);
+    final u = _u(size, n);
+    if (p.dy < n * u) {
+      final c = (p.dx / u).floor(), r = (p.dy / u).floor();
+      return c >= 0 && c < n && r >= 0 && r < n ? r * n + c : -1;
+    }
+    for (var k = 0; k < 21; k++) {
+      if (_box(size, n, k).contains(p)) {
+        if (!rules.has(s, viewer, k)) return -1;
+        _last = k;
+        return rules.trayCell(viewer, k, _orient[k]);
+      }
+    }
+    for (final k in const [0, 1]) {
+      if (_button(size, n, k).contains(p) && _last >= 0) {
+        final o = _orient[_last];
+        _orient[_last] = k == 0 ? (o ~/ 4) * 4 + (o + 1) % 4 : (o + 4) % 8;
+        return rules.trayCell(viewer, _last, _orient[_last]);
+      }
+    }
+    return -1;
+  }
+
+  @override
+  void paintSeat(Canvas c, Rect r, int seat, BoardPaintInfo info) {
+    final cs = r.width * 0.3;
+    for (final (x, y) in const [(0, 0), (1, 0), (1, 1)]) {
+      _cell(c, Rect.fromLTWH(r.center.dx - cs + x * cs, r.center.dy - cs + y * cs, cs, cs), colors[seat]);
+    }
+  }
 }

@@ -4,6 +4,7 @@ import 'race2.dart';
 import 'board_levels.dart';
 import 'chess.dart';
 import 'connect_games.dart';
+import 'corner_place.dart';
 import 'draughts.dart';
 import 'east_chess.dart';
 import 'go.dart';
@@ -316,5 +317,14 @@ class MasaPresets {
         opponentFor: (d) => Opponent(const [1, 1, 2, 2, 2, 2, 3, 3, 3, 3][d - 1], 3000, _ladder[d - 1]),
         solverFor: (_) => const Opponent(2, 4000, 0),
         openingFor: (d) => d <= 3 ? 0 : 2,
+      );
+
+  static BoardGameRules corner(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (_) => const CornerRules(),
+        opponentFor: (d) => Opponent(d <= 5 ? 1 : 2, 2500, _ladder[d - 1]),
+        solverFor: (_) => const Opponent(1, 3000, 0),
+        openingFor: (d) => 0,
+        humanSeatFor: (_) => 0,
       );
 }

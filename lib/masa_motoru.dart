@@ -9,6 +9,7 @@ export 'src/board_levels.dart';
 export 'src/board_view.dart';
 export 'src/chess.dart';
 export 'src/connect_games.dart';
+export 'src/corner_place.dart';
 export 'src/dice_games.dart';
 export 'src/draughts.dart';
 export 'src/east_chess.dart';

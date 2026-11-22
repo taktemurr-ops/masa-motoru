@@ -367,6 +367,44 @@ void main() {
     }
   }, timeout: const Timeout(Duration(minutes: 15)));
 
+  test('köşe yerleştirme: 21 taş, ilk taş başlangıcı örter, köşe kuralı', () {
+    expect(kCornerPieces.length, 21);
+    expect(kCornerPieces.fold<int>(0, (a, p) => a + p.length), 89);
+    // Benzersiz yönelim sayıları: toplam 91.
+    var uniq = 0;
+    for (var p = 0; p < 21; p++) {
+      for (var o = 0; o < 8; o++) {
+        if (!cornerDuplicate(p, o)) uniq++;
+      }
+    }
+    expect(uniq, 91);
+    const r = CornerRules();
+    final s = r.initial(SeededRandom(1));
+    final ms = r.moves(s);
+    expect(ms.every((m) => r.cellsOf(m).contains(r.start(0))), isTrue);
+    r.apply(s, ms.first);
+    r.apply(s, r.moves(s).first);
+    for (final m in r.moves(s)) {
+      final cells = r.cellsOf(m);
+      for (final i in cells) {
+        for (final j in [i - 1, i + 1, i - 14, i + 14]) {
+          if (j >= 0 && j < 196 && (j % 14 - i % 14).abs() <= 1 && !cells.contains(j)) expect(s.cells[j] == 0, isFalse);
+        }
+      }
+    }
+    playOut(r, 3);
+  });
+
+  test('köşe yerleştirme seviyeleri', () {
+    final rules = MasaPresets.corner('oyun-kose-yerlestirme');
+    for (final lv in const [5, 40]) {
+      final gl = rules.build(LevelPlanner(gameId: 'x-kose', optionalMechanics: const []).spec(lv));
+      // ignore: avoid_print
+      print('kose $lv ok=${gl.validation.ok} ply=${gl.validation.metric}');
+      expect(gl.validation.ok, isTrue);
+    }
+  }, timeout: const Timeout(Duration(minutes: 10)));
+
   test('dama başlangıç hamleleri', () {
     expect(DraughtsRules.english.moves(DraughtsRules.english.initial(SeededRandom(1))).length, 7);
     expect(DraughtsRules.turkish.moves(DraughtsRules.turkish.initial(SeededRandom(1))).length, 8);
