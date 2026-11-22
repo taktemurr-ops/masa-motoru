@@ -116,7 +116,7 @@ class LineRules extends BoardRules<GridState> {
     s.cells[cell] = p;
     s.last = cell;
     s.ply++;
-    if (_wins(s, cell, p)) {
+    if (winsAt(s, cell, p)) {
       s.vars[0] = p + 1;
     } else if (!s.cells.contains(-1)) {
       s.vars[0] = 3;
@@ -124,7 +124,7 @@ class LineRules extends BoardRules<GridState> {
     s.turn = 1 - p;
   }
 
-  bool _wins(GridState s, int cell, int p) {
+  bool winsAt(GridState s, int cell, int p) {
     final c0 = cell % cols, r0 = cell ~/ cols;
     for (final (dc, dr) in const [(1, 0), (0, 1), (1, 1), (1, -1)]) {
       var n = 1;

@@ -34,6 +34,14 @@ void main() {
     'hiper': MasaPresets.tavla('x-hiper', TavlaVariant.hyper),
     'nack': MasaPresets.tavla('x-nack', TavlaVariant.nack),
     'yaris': MasaPresets.tavla('x-yaris', TavlaVariant.race),
+    'pente': MasaPresets.pente('oyun-pente'),
+    'altili-bag': MasaPresets.connect6('oyun-altili-bag'),
+    'halma': MasaPresets.halma('oyun-halma'),
+    'cin-damasi': MasaPresets.starHalma('oyun-cin-damasi'),
+    'alquerque': MasaPresets.alquerque('oyun-alquerque'),
+    'surakarta': MasaPresets.surakarta('oyun-surakarta'),
+    'tafl': MasaPresets.tafl('oyun-hnefatafl'),
+    'havannah': MasaPresets.havannah('oyun-havannah'),
     'dokuz-tas': MasaPresets.morris('oyun-dokuz-tas'),
     'go': MasaPresets.go('oyun-go'),
     'tavla': MasaPresets.tavla('oyun-tavla'),
@@ -97,6 +105,86 @@ void main() {
       expect(s.cells[i] >= 0, isTrue);
       expect(s.cells[23 - i] <= 0, isTrue);
     }
+  });
+
+  test('pente: çift alma', () {
+    const r = PenteRules(13);
+    final s = r.initial(SeededRandom(1));
+    s.cells[0] = 0;
+    s.cells[1] = 1;
+    s.cells[2] = 1;
+    s.turn = 0;
+    r.apply(s, mv(-1, 3));
+    expect(s.cells[1], -1);
+    expect(s.cells[2], -1);
+    expect(s.vars[2], 1);
+  });
+
+  test('altılı bağ: ilk hamle bir, sonra iki taş', () {
+    const r = Connect6Rules(15);
+    final s = r.initial(SeededRandom(1));
+    r.apply(s, mv(-1, 100));
+    expect(s.turn, 1);
+    r.apply(s, mv(-1, 101));
+    expect(s.turn, 1);
+    r.apply(s, mv(-1, 102));
+    expect(s.turn, 0);
+  });
+
+  test('çin daması: 121 delik, 10 taş', () {
+    const r = JumpRaceRules.star();
+    final s = r.initial(SeededRandom(1));
+    expect(s.cells.where((x) => x != -2).length, 121);
+    expect(s.cells.where((x) => x == 0).length, 10);
+    expect(s.cells.where((x) => x == 1).length, 10);
+    expect(r.moves(s).isNotEmpty, isTrue);
+  });
+
+  test('halma: 8×8 kampta 10 taş', () {
+    const r = JumpRaceRules.halma(8);
+    final s = r.initial(SeededRandom(1));
+    expect(s.cells.where((x) => x == 0).length, 10);
+    expect(s.cells.where((x) => x == 1).length, 10);
+  });
+
+  test('surakarta: halkadan geçmeden alım yok', () {
+    const r = SurakartaRules();
+    final s = r.initial(SeededRandom(1));
+    expect(r.moves(s).where((m) => mvExtra(m) == 1), isEmpty);
+  });
+
+  test('tafl: başlangıç dizilişleri', () {
+    for (final (n, att, def) in const [(7, 8, 4), (9, 16, 8), (11, 24, 12)]) {
+      final r = TaflRules(n);
+      final s = r.initial(SeededRandom(1));
+      expect(s.cells.where((x) => x == 0).length, att, reason: '$n');
+      expect(s.cells.where((x) => x == 1).length, def, reason: '$n');
+      expect(s.cells.where((x) => x == 2).length, 1);
+    }
+  });
+
+  test('havannah: köprü kazanır', () {
+    const r = HavannahRules(4);
+    final s = r.initial(SeededRandom(1));
+    // (x,z): (3,-3) köşesinden (3,0) köşesine kenar boyunca: x=3, z=-3..0.
+    for (final z in const [-3, -2, -1, 0]) {
+      expect(r.isOver(s), isFalse);
+      s.turn = 0;
+      r.apply(s, mv(-1, (z + 3) * 7 + 6));
+    }
+    expect(r.winner(s), 0);
+  });
+
+  test('havannah: halka kazanır', () {
+    const r = HavannahRules(5);
+    final s = r.initial(SeededRandom(1));
+    const ring = [(1, 0), (1, -1), (0, -1), (-1, 0), (-1, 1), (0, 1)];
+    for (final (x, z) in ring) {
+      expect(r.isOver(s), isFalse);
+      s.turn = 0;
+      r.apply(s, mv(-1, (z + 4) * 9 + x + 4));
+    }
+    expect(r.winner(s), 0);
   });
 
   test('reversi başlangıç: 4 hamle', () {

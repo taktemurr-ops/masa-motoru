@@ -1,6 +1,7 @@
 /// Masa Oyunları ailesinin ortak motoru.
 library;
 
+export 'src/abstract2.dart';
 export 'src/board_ai.dart';
 export 'src/board_game.dart';
 export 'src/board_levels.dart';
@@ -23,3 +24,4 @@ export 'src/skins.dart';
 export 'src/skins_dice.dart';
 export 'src/skins2.dart';
 export 'src/skins3.dart';
+export 'src/skins4.dart';

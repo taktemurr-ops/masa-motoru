@@ -1,3 +1,4 @@
+import 'abstract2.dart';
 import 'board_levels.dart';
 import 'chess.dart';
 import 'connect_games.dart';
@@ -157,6 +158,75 @@ class MasaPresets {
         opponentFor: _noisy,
         solverFor: (_) => const Opponent(2, 0, 0),
         openingFor: (d) => 0,
+        humanSeatFor: (_) => 0,
+      );
+
+  static const _ladder = [1.0, 0.85, 0.7, 0.55, 0.42, 0.32, 0.22, 0.14, 0.07, 0.03];
+
+  static BoardGameRules pente(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (d) => PenteRules(d <= 4 ? 13 : 15),
+        opponentFor: (d) => Opponent(d <= 3 ? 1 : (d <= 6 ? 2 : 3), 6000, _ladder[d - 1]),
+        solverFor: (_) => const Opponent(4, 12000, 0),
+        openingFor: (d) => d <= 3 ? 0 : 2,
+        humanSeatFor: (_) => 0,
+      );
+
+  static BoardGameRules connect6(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (d) => Connect6Rules(d <= 5 ? 15 : 19),
+        opponentFor: (d) => Opponent(d <= 3 ? 1 : (d <= 6 ? 2 : 3), 6000, _ladder[d - 1]),
+        solverFor: (_) => const Opponent(4, 12000, 0),
+        openingFor: (d) => d <= 3 ? 0 : 3,
+        humanSeatFor: (_) => 0,
+      );
+
+  static BoardGameRules halma(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (d) => JumpRaceRules.halma(d <= 5 ? 8 : 10),
+        opponentFor: (d) => Opponent(d <= 4 ? 1 : (d <= 7 ? 2 : 3), 4000, _ladder[d - 1]),
+        solverFor: (_) => const Opponent(3, 8000, 0),
+        openingFor: (d) => 0,
+      );
+
+  static BoardGameRules starHalma(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (_) => const JumpRaceRules.star(),
+        opponentFor: (d) => Opponent(d <= 5 ? 1 : 2, 3000, _ladder[d - 1]),
+        solverFor: (_) => const Opponent(2, 6000, 0),
+        openingFor: (d) => 0,
+      );
+
+  static BoardGameRules alquerque(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (_) => const AlquerqueRules(),
+        opponentFor: (d) => Opponent(const [1, 1, 2, 2, 3, 3, 4, 4, 5, 5][d - 1], 10000, _ladder[d - 1]),
+        solverFor: (_) => const Opponent(6, 25000, 0),
+        openingFor: (d) => 0,
+      );
+
+  static BoardGameRules surakarta(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (_) => const SurakartaRules(),
+        opponentFor: (d) => Opponent(const [1, 1, 1, 2, 2, 2, 3, 3, 3, 3][d - 1], 5000, _ladder[d - 1]),
+        solverFor: (_) => const Opponent(3, 9000, 0),
+        openingFor: (d) => 0,
+      );
+
+  static BoardGameRules tafl(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (d) => TaflRules(d <= 4 ? 7 : (d <= 7 ? 9 : 11)),
+        opponentFor: (d) => Opponent(d <= 3 ? 1 : 2, 5000, _ladder[d - 1]),
+        solverFor: (_) => const Opponent(3, 9000, 0),
+        openingFor: (d) => 0,
+      );
+
+  static BoardGameRules havannah(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (d) => HavannahRules(d <= 3 ? 4 : (d <= 7 ? 5 : 6)),
+        opponentFor: (d) => Opponent(d <= 4 ? 1 : 2, 3000, _ladder[d - 1]),
+        solverFor: (_) => const Opponent(3, 7000, 0),
+        openingFor: (d) => d <= 3 ? 0 : 2,
         humanSeatFor: (_) => 0,
       );
 }
