@@ -379,32 +379,38 @@ class _BoardViewState extends State<BoardView> {
         bw = bh * aspect;
       }
       final size = Size(bw, bh);
+      // Koyu masa zemininde üst bilgiler açık renkle yazılır (okunurluk).
+      final bg = ctx.background;
+      final dark = bg.isNotEmpty && bg.map((c) => c.computeLuminance()).reduce((a, b) => a + b) / bg.length < 0.3;
+      final fg = dark ? const Color(0xFFF5EFE6) : null;
+      final fgDim = dark ? const Color(0xCCF5EFE6) : Theme.of(context).colorScheme.onSurfaceVariant;
+      final accent = dark ? const Color(0xFFFFD58A) : Theme.of(context).colorScheme.primary;
       return Column(children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: Row(children: [
             Expanded(
               child: Text(_t(level.goal == BoardGoal.win ? _tGoalWin : _tGoalNotLose),
-                  style: Theme.of(context).textTheme.titleSmall, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(color: fg), maxLines: 2, overflow: TextOverflow.ellipsis),
             ),
-            const Icon(Icons.timer_outlined, size: 18),
-            Text(' ${_seconds ~/ 60}:${(_seconds % 60).toString().padLeft(2, '0')}'),
+            Icon(Icons.timer_outlined, size: 18, color: fg),
+            Text(' ${_seconds ~/ 60}:${(_seconds % 60).toString().padLeft(2, '0')}', style: TextStyle(color: fg)),
           ]),
         ),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text(ctx.passAndPlay ? '' : '${_t(_tYou)}: '),
+          Text(ctx.passAndPlay ? '' : '${_t(_tYou)}: ', style: TextStyle(color: fg)),
           SizedBox(width: 20, height: 20, child: CustomPaint(painter: _SeatP(widget.skin, ctx.passAndPlay ? s.turn : _viewer, info))),
           const SizedBox(width: 12),
           AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 200),
             style: TextStyle(
                 fontWeight: FontWeight.w700,
-                color: myTurn ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant),
+                color: myTurn ? accent : fgDim),
             child: Text(turnText),
           ),
         ]),
         if (status.isNotEmpty)
-          Padding(padding: const EdgeInsets.only(top: 2), child: Text(status, style: Theme.of(context).textTheme.bodySmall)),
+          Padding(padding: const EdgeInsets.only(top: 2), child: Text(status, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: fgDim))),
         Expanded(
           child: Center(
             child: GestureDetector(
