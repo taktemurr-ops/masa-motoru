@@ -1,6 +1,7 @@
 import 'abstract2.dart';
 import 'abstract3.dart';
 import 'race2.dart';
+import 'pachisi.dart';
 import 'board_levels.dart';
 import 'chess.dart';
 import 'connect_games.dart';
@@ -283,6 +284,16 @@ class MasaPresets {
   static BoardGameRules yut(String id) => BoardGameRules(
         gameId: id,
         rulesFor: (_) => const YutRules(),
+        opponentFor: _noisy,
+        solverFor: (_) => const Opponent(2, 0, 0),
+        openingFor: (d) => 0,
+        humanSeatFor: (_) => 0,
+      );
+
+  /// Paçisi: 4 koltuk (0+2 ve 1+3 ortak); taş sayısı zorlukla 2'den 4'e çıkar.
+  static BoardGameRules pachisi(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (d) => PachisiRules(d <= 3 ? 2 : (d <= 6 ? 3 : 4)),
         opponentFor: _noisy,
         solverFor: (_) => const Opponent(2, 0, 0),
         openingFor: (d) => 0,

@@ -90,6 +90,9 @@ abstract class BoardRules<S extends BoardState> {
   /// Sonsuz oyunlara karşı: bu kadar hamleden sonra berabere sayılır.
   int get maxPly => 400;
 
+  /// İki koltuk aynı tarafta mı (ortaklı oyunlarda takım arkadaşları).
+  bool sameSide(int a, int b) => a == b;
+
   /// Oyun sürerken ekranda gösterilecek kısa durum (skor, taş sayısı…).
   String status(S s, String lang) => '';
 }
@@ -99,7 +102,7 @@ enum Outcome { win, draw, loss }
 
 Outcome outcomeFor<S extends BoardState>(BoardRules<S> rules, S s, int player) {
   final w = rules.winner(s);
-  if (w == player) return Outcome.win;
   if (w < 0) return Outcome.draw;
+  if (w == player || rules.sameSide(w, player)) return Outcome.win;
   return Outcome.loss;
 }

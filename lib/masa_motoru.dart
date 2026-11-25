@@ -35,3 +35,5 @@ export 'src/skins4.dart';
 export 'src/skins5.dart';
 export 'src/skins6.dart';
 export 'src/skins7.dart';
+export 'src/pachisi.dart';
+export 'src/skin_pachisi.dart';

@@ -311,7 +311,7 @@ class _BoardViewState extends State<BoardView> {
     if (_multi) {
       final w = rules.winner(s);
       final me = _viewer;
-      final iWon = _match != null ? w == me : w >= 0;
+      final iWon = _match != null ? w >= 0 && rules.sameSide(w, me) : w >= 0;
       ctx.sfx(iWon ? Sfx.win : Sfx.lose);
       unawaited(_match?.finish(w, iWon: iWon));
       ctx.finish(RoundResult(
