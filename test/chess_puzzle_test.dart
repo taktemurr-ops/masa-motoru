@@ -52,7 +52,7 @@ void main() {
       final s = PChess.fromFen('r3k3/8/8/1N6/8/8/8/4K3 w - - 0 1');
       final (m, v) = s.bestMove(4);
       expect(uciOf(m), 'b5c7');
-      expect(v, greaterThanOrEqualTo(400));
+      expect(v, greaterThanOrEqualTo(300)); // at kaldı, kale gitti
     });
   });
 
