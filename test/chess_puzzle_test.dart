@@ -69,7 +69,7 @@ void main() {
       expect(probe('k7/8/8/8/8/8/7P/K7 w - - 0 1').$1, isTrue);
       expect(probe('8/8/8/4k3/8/8/7P/K7 w - - 0 1').$1, isFalse);
       // Siyah piyonlu taraf (aynalama).
-      expect(probe('8/8/8/8/4p3/8/4k3/4K3 b - - 0 1').$1, isTrue);
+      expect(probe('8/8/8/8/4p3/4k3/8/4K3 b - - 0 1').$1, isTrue);
     });
   });
 
