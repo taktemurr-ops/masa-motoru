@@ -23,6 +23,10 @@ class BoardPaintInfo {
   final List<Color> colors;
   final bool colorBlind;
   final bool canAct;
+
+  /// Ekrana bakan koltuk (gizli bilgili oyunlar: yalnızca onun taşları/eli
+  /// açık çizilir). Sırayla oynamada sırası gelen koltuk; -1 hiçbiri.
+  final int viewer;
   const BoardPaintInfo({
     this.selected,
     this.targets = const {},
@@ -32,6 +36,7 @@ class BoardPaintInfo {
     required this.colors,
     required this.colorBlind,
     required this.canAct,
+    this.viewer = 0,
   });
 }
 
@@ -357,6 +362,7 @@ class _BoardViewState extends State<BoardView> {
       colors: ctx.pieceColors,
       colorBlind: ctx.colorBlind,
       canAct: legal.isNotEmpty && !_busy,
+      viewer: ctx.passAndPlay ? (_isLocal(s.turn) ? s.turn : -1) : _viewer,
     );
   }
 

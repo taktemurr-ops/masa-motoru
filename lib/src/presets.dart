@@ -19,6 +19,10 @@ import 'dice_games.dart';
 import 'race_games.dart';
 import 'line_games.dart';
 import 'reversi.dart';
+import 'tiger_goats.dart';
+import 'hidden_ranks.dart';
+import 'tile_draft.dart';
+import 'card_line.dart';
 
 /// Hazır oyun ayarları: her oyun deposu yalnızca kimliğini verir.
 class MasaPresets {
@@ -367,6 +371,48 @@ class MasaPresets {
         rulesFor: (d) => SettleRules(_seats(d)),
         opponentFor: _noisy,
         solverFor: (_) => const Opponent(2, 0, 0),
+        openingFor: (d) => 0,
+        humanSeatFor: (_) => 0,
+      );
+
+  /// Kaplan ve Keçiler: ilk basamaklarda oyuncu kaplanlarla kazanmaya
+  /// oynar; sonra taraf tohumdan, hedef kaybetmemek.
+  static BoardGameRules tigerGoats(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (_) => const TigerGoatRules(),
+        opponentFor: (d) => Opponent(const [1, 1, 1, 2, 2, 2, 3, 3, 3, 3][d - 1], 5000, _ladder[d - 1]),
+        solverFor: (_) => const Opponent(4, 12000, 0),
+        goalFor: (d) => d <= 3 ? BoardGoal.win : BoardGoal.notLose,
+        openingFor: (d) => 0,
+        humanSeatFor: (d) => d <= 3 ? 1 : null,
+      );
+
+  /// Gizli Rütbeler: rakip gizli rütbelere bakmayan politika ile oynar.
+  static BoardGameRules hiddenRanks(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (_) => const HiddenRanksRules(),
+        opponentFor: _noisy,
+        solverFor: (_) => const Opponent(1, 0, 0),
+        openingFor: (d) => 0,
+        humanSeatFor: (_) => 0,
+      );
+
+  /// Çini Döşeme: 2, 3, sonra 4 oyuncu.
+  static BoardGameRules tileDraft(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (d) => TileDraftRules(d <= 4 ? 2 : (d <= 7 ? 3 : 4)),
+        opponentFor: _noisy,
+        solverFor: (_) => const Opponent(1, 0, 0),
+        openingFor: (d) => 0,
+        humanSeatFor: (_) => 0,
+      );
+
+  /// Kartlı Beşleme: iki kişide iki dizi, üç kişide bir dizi.
+  static BoardGameRules cardLine(String id) => BoardGameRules(
+        gameId: id,
+        rulesFor: (d) => CardLineRules(d <= 6 ? 2 : 3),
+        opponentFor: _noisy,
+        solverFor: (_) => const Opponent(1, 0, 0),
         openingFor: (d) => 0,
         humanSeatFor: (_) => 0,
       );

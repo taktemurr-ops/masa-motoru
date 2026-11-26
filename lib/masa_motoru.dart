@@ -37,3 +37,7 @@ export 'src/skins6.dart';
 export 'src/skins7.dart';
 export 'src/pachisi.dart';
 export 'src/skin_pachisi.dart';
+export 'src/tiger_goats.dart';
+export 'src/hidden_ranks.dart';
+export 'src/tile_draft.dart';
+export 'src/card_line.dart';
