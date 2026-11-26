@@ -12,6 +12,7 @@ import 'package:studio_core/core/strings.dart';
 import 'board_ai.dart';
 import 'board_game.dart';
 import 'board_levels.dart';
+import 'studio_chrome.dart';
 
 /// Çizimde kullanılan anlık bilgiler.
 class BoardPaintInfo {
@@ -360,7 +361,9 @@ class _BoardViewState extends State<BoardView> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => StudioChrome(child: Builder(builder: _build));
+
+  Widget _build(BuildContext context) {
     final status = rules.status(s, ctx.lang);
     final myTurn = _isLocal(s.turn) && !_over;
     final turnText = _flash ??
@@ -379,38 +382,56 @@ class _BoardViewState extends State<BoardView> {
         bw = bh * aspect;
       }
       final size = Size(bw, bh);
-      // Koyu masa zemininde üst bilgiler açık renkle yazılır (okunurluk).
-      final bg = ctx.background;
-      final dark = bg.isNotEmpty && bg.map((c) => c.computeLuminance()).reduce((a, b) => a + b) / bg.length < 0.3;
-      final fg = dark ? const Color(0xFFF5EFE6) : null;
-      final fgDim = dark ? const Color(0xCCF5EFE6) : Theme.of(context).colorScheme.onSurfaceVariant;
-      final accent = dark ? const Color(0xFFFFD58A) : Theme.of(context).colorScheme.primary;
+      final look = StudioLook.of(context);
       return Column(children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
           child: Row(children: [
             Expanded(
               child: Text(_t(level.goal == BoardGoal.win ? _tGoalWin : _tGoalNotLose),
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(color: fg), maxLines: 2, overflow: TextOverflow.ellipsis),
+                  style: const TextStyle(color: kStudioText, fontWeight: FontWeight.w800, fontSize: 14),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
             ),
-            Icon(Icons.timer_outlined, size: 18, color: fg),
-            Text(' ${_seconds ~/ 60}:${(_seconds % 60).toString().padLeft(2, '0')}', style: TextStyle(color: fg)),
+            const SizedBox(width: 8),
+            StudioTag(icon: Icons.timer_outlined, text: '${_seconds ~/ 60}:${(_seconds % 60).toString().padLeft(2, '0')}'),
           ]),
         ),
-        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text(ctx.passAndPlay ? '' : '${_t(_tYou)}: ', style: TextStyle(color: fg)),
-          SizedBox(width: 20, height: 20, child: CustomPaint(painter: _SeatP(widget.skin, ctx.passAndPlay ? s.turn : _viewer, info))),
-          const SizedBox(width: 12),
-          AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 200),
-            style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: myTurn ? accent : fgDim),
-            child: Text(turnText),
+        // Sıra göstergesi: oyuncunun taşı ve sıra yazısı tek hapta; sıra
+        // oyuncudaysa vurgu rengiyle yanar.
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: myTurn ? null : Colors.black.withValues(alpha: 0.32),
+            gradient: myTurn
+                ? LinearGradient(colors: [look.accent.withValues(alpha: 0.85), look.play.withValues(alpha: 0.85)])
+                : null,
+            border: Border.all(
+                color: myTurn ? Colors.white.withValues(alpha: 0.85) : look.accent.withValues(alpha: 0.45),
+                width: myTurn ? 1.6 : 1.2),
           ),
-        ]),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            if (!ctx.passAndPlay)
+              Text('${_t(_tYou)}: ',
+                  style: TextStyle(color: myTurn ? look.onAccent : kStudioTextDim, fontWeight: FontWeight.w700)),
+            SizedBox(width: 20, height: 20, child: CustomPaint(painter: _SeatP(widget.skin, ctx.passAndPlay ? s.turn : _viewer, info))),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(turnText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontWeight: FontWeight.w800, color: myTurn ? look.onAccent : kStudioText)),
+            ),
+          ]),
+        ),
         if (status.isNotEmpty)
-          Padding(padding: const EdgeInsets.only(top: 2), child: Text(status, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: fgDim))),
+          Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(status,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: kStudioTextDim, fontSize: 12.5, fontWeight: FontWeight.w600))),
         Expanded(
           child: Center(
             child: GestureDetector(
@@ -425,13 +446,16 @@ class _BoardViewState extends State<BoardView> {
         Padding(
           padding: const EdgeInsets.only(bottom: 8, top: 4),
           child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-            IconButton.filledTonal(
-                onPressed: _ended || _busy || !myTurn ? null : _hint, icon: const Icon(Icons.lightbulb), tooltip: ctx.t('hint')),
+            StudioRoundAction(
+                onPressed: _ended || _busy || !myTurn ? null : _hint, icon: Icons.lightbulb, tooltip: ctx.t('hint')),
             if (_match == null)
-              IconButton.filledTonal(
-                onPressed: _undo.isNotEmpty && !_busy && !_ended ? _doUndo : null, icon: const Icon(Icons.undo), tooltip: ctx.t('undo')),
+              StudioRoundAction(
+                  onPressed: _undo.isNotEmpty && !_busy && !_ended ? _doUndo : null, icon: Icons.undo, tooltip: ctx.t('undo')),
             if (_legal.length > 1 && _legal.contains(kPass))
-              FilledButton.tonal(onPressed: _busy || _ended ? null : () => _play(kPass), child: Text(_t(_tPass))),
+              StudioChoice(
+                  icon: Icons.skip_next_rounded,
+                  onPressed: _busy || _ended ? null : () => _play(kPass),
+                  label: _t(_tPass)),
           ]),
         ),
       ]);
