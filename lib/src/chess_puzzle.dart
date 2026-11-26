@@ -1223,14 +1223,18 @@ class PuzzleGen {
     if (s.inCheck(0)) return null;
     final ms = s.legal();
     if (ms.length < 3) return null;
-    var holds = 0;
+    var holds = 0, capture = false;
     for (final m in ms) {
       s.make(m);
       final ok = kpkView(s) == null || !kpkProbe(t, s).$1;
       s.unmake(m);
-      if (ok) holds++;
+      if (ok) {
+        holds++;
+        if (s.b[pTo(m)] >= 0) capture = true;
+      }
     }
-    if (holds != 1) return null;
+    // Tek kurtaran hamle piyonu almaksa bulmaca değil.
+    if (holds != 1 || capture) return null;
     // Aynala: savunan beyaz, sırada.
     final out = PChess(mirrorColors(s.b), 0);
     return (out, kHoldMoves);
