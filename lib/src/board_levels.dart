@@ -44,6 +44,12 @@ class BoardLevel {
 /// yapay zekâ hedefi tutturabiliyorsa kabul edilir; böylece her bölüm
 /// kazanılabilir.
 class BoardGameRules extends GameRules<BoardLevel> {
+  /// Çevrimiçi kural sürümü: 2 — QA turu (28.11) kural düzeltmeleri (101,
+  /// Mahjong, Domino, Satranç tekrarı, Plakoto anne kuralı) eski sürümlerle
+  /// aynı masada ayrışmasın.
+  @override
+  int get onlineVersion => 2;
+
   @override
   final String gameId;
   final BoardRules Function(int difficulty) rulesFor;
