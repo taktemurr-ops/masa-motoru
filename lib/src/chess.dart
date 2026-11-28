@@ -12,7 +12,8 @@ int pieceType(int v) => v < 0 ? 0 : v % 8;
 /// vars: [0] sonuç (0 sürüyor, 1 beyaz, 2 siyah, 3 berabere), [1] 50 hamle
 /// sayacı, [2] rok hakları (1 beyaz kısa, 2 beyaz uzun, 4 siyah kısa,
 /// 8 siyah uzun), [3] geçerken alma karesi + 1, [4..5] şah çekme sayısı
-/// (üç şah çeşidi), [6] Chess960 kale sütunları (kısa*8 + uzun).
+/// (üç şah çeşidi), [6] Chess960 kale sütunları (kısa*8 + uzun), [8..]
+/// son alımsız/piyonsuz hamlelerden bu yana konum özetleri (üç kez tekrar).
 enum ChessVariant { standard, chess960, threeCheck, kingOfHill, horde, atomic, racingKings, antichess, gardner, losAlamos, pawnRace }
 
 class ChessRules extends BoardRules<GridState> {
@@ -37,7 +38,7 @@ class ChessRules extends BoardRules<GridState> {
 
   @override
   GridState initial(SeededRandom r) {
-    final s = GridState(n, n, List.filled(n * n, -1), List.filled(8, 0));
+    final s = GridState(n, n, List.filled(n * n, -1), List.filled(8, 0, growable: true));
     if (variant == ChessVariant.gardner) {
       const back = [cR, cN, cB, cQ, cK];
       for (var c = 0; c < 5; c++) {
@@ -350,12 +351,47 @@ class ChessRules extends BoardRules<GridState> {
     s.last = to;
   }
 
+  /// Konum özeti: taşlar, sıra, rok hakları ve geçerken alma karesi.
+  /// (Web'de de taşmasın diye 30 bitte tutulur.)
+  int positionKey(GridState s) {
+    var h = s.turn + 1;
+    for (final v in s.cells) {
+      h = (h * 31 + v + 2) & 0x3fffffff;
+    }
+    h = (h * 31 + s.vars[2]) & 0x3fffffff;
+    return (h * 31 + s.vars[3]) & 0x3fffffff;
+  }
+
+  /// Üç kez tekrar (FIDE 9.2): aynı konum aynı oyuncu sıradayken üçüncü kez
+  /// oluşursa berabere. Alım ya da piyon hamlesi geçmişi sıfırlar.
+  bool _repetition(GridState s, int before) {
+    try {
+      if (s.vars.length == 8) s.vars.add(before);
+      if (s.vars[1] == 0) s.vars.length = 8;
+      final k = positionKey(s);
+      s.vars.add(k);
+      var n = 0;
+      for (var i = 8; i < s.vars.length; i++) {
+        if (s.vars[i] == k) n++;
+      }
+      return n >= 3;
+    } on UnsupportedError {
+      return false; // sabit uzunluklu eski durum: tekrar izlenmez
+    }
+  }
+
   @override
   void apply(GridState s, int m) {
     final p = s.turn;
+    final before = s.vars.length == 8 ? positionKey(s) : 0;
     _move(s, m);
     s.ply++;
     s.turn = 1 - p;
+    if (_repetition(s, before)) {
+      _judge(s, p);
+      if (!isOver(s)) s.vars[0] = 3;
+      return;
+    }
     _judge(s, p);
   }
 
