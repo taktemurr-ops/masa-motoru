@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:studio_core/app/game_api.dart';
 import 'package:studio_core/app/services/audio.dart';
+import 'package:studio_core/app/turn_clock.dart';
+import 'package:studio_core/core/net_texts.dart';
 import 'package:studio_core/core/game_rules.dart';
 import 'package:studio_core/core/rng.dart';
 import 'package:studio_core/core/strings.dart';
@@ -78,6 +80,11 @@ class BoardView extends StatefulWidget {
   final PlayContext ctx;
   final BoardSkin skin;
   const BoardView({super.key, required this.ctx, required this.skin});
+
+  /// Testler: yapay zekâ ayrı isolate yerine aynı iş parçacığında hesaplanır
+  /// (sahte zamanla çalışan widget testlerinde isolate sonucu gelmez).
+  @visibleForTesting
+  static bool syncAi = false;
 
   @override
   State<BoardView> createState() => _BoardViewState();
@@ -157,16 +164,44 @@ class _BoardViewState extends State<BoardView> {
   void dispose() {
     _timer?.cancel();
     _sub?.cancel();
+    _turn.dispose();
     super.dispose();
   }
+
+  /// Çevrimiçi maçta sıra süresi: dolunca bu cihazın oyuncusu adına hızlı bir
+  /// yapay zekâ hamlesi yapılır.
+  late final TurnClock _turn = TurnClock(() {
+    if (mounted) setState(() {});
+  });
+
+  void _armTurn() {
+    if (_match != null && mounted && !_ended && !_over && !_busy && _isLocal(s.turn) && !rules.needsChance(s)) {
+      if (!_turn.running) _turn.start(_turnTimeout);
+    } else {
+      _turn.stop();
+    }
+  }
+
+  void _turnTimeout() {
+    if (!mounted || _ended || _over || _busy || !_isLocal(s.turn) || rules.needsChance(s)) return;
+    final legal = rules.moves(s);
+    if (legal.isEmpty) return;
+    var m = _runAi(_AiJob(rules, s.serialize(), 1, 400, 0, r.nextInt(1 << 30)));
+    if (!legal.contains(m)) m = legal.first;
+    _play(m, auto: true);
+  }
+
+  Future<int> _ai(_AiJob j) => BoardView.syncAi ? Future.value(_runAi(j)) : compute(_runAi, j);
 
   /// Çevrimiçi: sıradaki koltuğun hamlesini bekler.
   Future<int?> _remoteMove(int seat) async {
     while (mounted && !_ended) {
       final i = _inbox.indexWhere((e) => e.$1 == seat);
       if (i >= 0) return int.tryParse(_inbox.removeAt(i).$2);
-      // Bağlantısı kopan oyuncunun yerine bot geçtiyse bekleme.
-      if (_isAi(seat)) return null;
+      // Bağlantısı kopan oyuncunun yerine bot geçtiyse ve onu bu cihaz (ev
+      // sahibi) oynayacaksa bekleme. Diğer cihazlar ev sahibinin hamlesini bekler
+      // (eskiden beklemeden dönülüyor, ev sahibi olmayan cihaz donuyordu).
+      if (_isAi(seat) && (_match?.isHost ?? true)) return null;
       _wake = Completer<void>();
       await Future.any([_wake!.future, Future<void>.delayed(const Duration(seconds: 2))]);
     }
@@ -181,6 +216,7 @@ class _BoardViewState extends State<BoardView> {
   Future<void> _advance() async {
     while (mounted && !_ended) {
       if (_over) {
+        _turn.stop();
         _end();
         return;
       }
@@ -215,6 +251,7 @@ class _BoardViewState extends State<BoardView> {
         }
         setState(() => _busy = false);
         _persist();
+        _armTurn();
         return;
       }
       setState(() => _busy = true);
@@ -232,7 +269,7 @@ class _BoardViewState extends State<BoardView> {
         continue;
       }
       final started = DateTime.now();
-      final m = await compute(_runAi, _AiJob(rules, s.serialize(), level.opp.depth, level.opp.budget, level.opp.noise, r.nextInt(1 << 30)));
+      final m = await _ai(_AiJob(rules, s.serialize(), level.opp.depth, level.opp.budget, level.opp.noise, r.nextInt(1 << 30)));
       final spent = DateTime.now().difference(started).inMilliseconds;
       if (spent < 420) await Future<void>.delayed(Duration(milliseconds: 420 - spent));
       if (!mounted || _ended) return;
@@ -276,7 +313,8 @@ class _BoardViewState extends State<BoardView> {
     setState(() => _selected = null);
   }
 
-  void _play(int m) {
+  void _play(int m, {bool auto = false}) {
+    _turn.stop(byPlayer: !auto);
     _undo.add(s.serialize());
     unawaited(_match?.send('$m'));
     setState(() {
@@ -406,7 +444,9 @@ class _BoardViewState extends State<BoardView> {
                   overflow: TextOverflow.ellipsis),
             ),
             const SizedBox(width: 8),
-            StudioTag(icon: Icons.timer_outlined, text: '${_seconds ~/ 60}:${(_seconds % 60).toString().padLeft(2, '0')}'),
+            _turn.running
+                ? StudioTag(icon: Icons.hourglass_bottom_rounded, text: netTurnLeft(ctx.lang, _turn.left))
+                : StudioTag(icon: Icons.timer_outlined, text: '${_seconds ~/ 60}:${(_seconds % 60).toString().padLeft(2, '0')}'),
           ]),
         ),
         // Sıra göstergesi: oyuncunun taşı ve sıra yazısı tek hapta; sıra
