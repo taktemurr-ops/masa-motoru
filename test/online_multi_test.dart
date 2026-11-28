@@ -84,7 +84,7 @@ class _Rig {
   void watch(int i) {
     final m = links[i]?.m;
     m?.rejections.listen((_) async {
-      if (links[i]?.m != m) return;
+      if (links[i]?.m != m || resyncs > 20) return;
       final fresh = await t.backends[i].rejoin(t.matchId, ended: true);
       if (fresh == null) return;
       t.matches[i] = fresh;
