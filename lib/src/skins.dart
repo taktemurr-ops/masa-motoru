@@ -132,22 +132,22 @@ class _WoodLook {
 }
 
 _WoodLook _woodLook(String id) {
-  if (id.contains('kapmali')) {
+  if (id == 'pente') {
     // Kapmalı Beşleme: arduvaz mavisi tahta, kehribar ve fildişi taşlar.
     return const _WoodLook(Color(0xFF8FA6BC), Color(0xFF7A90A6), Color(0xFF233A54),
         stones: [Color(0xFFE39B2D), Color(0xFFF4EEE2)]);
   }
-  if (id.contains('altili')) {
+  if (id == 'altili-bag') {
     // Altılı Bağ: kiraz ağacı, yeşim ve gece mavisi taşlar.
     return const _WoodLook(Color(0xFFC98E6A), Color(0xFFB57A57), Color(0xFF4A2414),
         stones: [Color(0xFF1C2A44), Color(0xFF3DBB8E)]);
   }
-  if (id.contains('besleme')) {
+  if (id == 'besleme') {
     // Beşleme: açık bambu tahta, koyu yeşil çizgiler.
     return const _WoodLook(Color(0xFFD9DFA6), Color(0xFFC8D08F), Color(0xFF3E5A22));
   }
   // Go (ve diğerleri): kaya ağacı rengi, yıldız noktaları.
-  return _WoodLook(const Color(0xFFDDB777), const Color(0xFFD2A965), const Color(0xFF6B4A22), hoshi: id.contains('go'));
+  return _WoodLook(const Color(0xFFDDB777), const Color(0xFFD2A965), const Color(0xFF6B4A22), hoshi: id == 'go');
 }
 
 class DiscSkin extends BoardSkin {
