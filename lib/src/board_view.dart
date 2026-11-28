@@ -27,7 +27,12 @@ class BoardPaintInfo {
   /// Ekrana bakan koltuk (gizli bilgili oyunlar: yalnızca onun taşları/eli
   /// açık çizilir). Sırayla oynamada sırası gelen koltuk; -1 hiçbiri.
   final int viewer;
+
+  /// Kuralların kimliği ([BoardRules.id]): aynı çizimi paylaşan oyunlar
+  /// kendi tahta/taş rengini seçer (ör. Go, Beşleme, Kapmalı, Altılı Bağ).
+  final String gameId;
   const BoardPaintInfo({
+    this.gameId = '',
     this.selected,
     this.targets = const {},
     this.hintFrom,
@@ -363,6 +368,7 @@ class _BoardViewState extends State<BoardView> {
       colorBlind: ctx.colorBlind,
       canAct: legal.isNotEmpty && !_busy,
       viewer: ctx.passAndPlay ? (_isLocal(s.turn) ? s.turn : -1) : _viewer,
+      gameId: rules.id,
     );
   }
 

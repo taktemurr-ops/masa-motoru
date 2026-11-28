@@ -122,10 +122,40 @@ class XoxSkin extends BoardSkin {
 /// (yeşil keçe), Beşleme (ahşap, kesişim noktaları).
 enum DiscBoard { frame, felt, wood }
 
+/// Ahşap kesişim tahtasını paylaşan oyunların kendi görünümü: tahta rengi,
+/// çizgi rengi, taş renkleri ve yıldız noktaları.
+class _WoodLook {
+  final Color board, grain, line;
+  final List<Color>? stones;
+  final bool hoshi;
+  const _WoodLook(this.board, this.grain, this.line, {this.stones, this.hoshi = false});
+}
+
+_WoodLook _woodLook(String id) {
+  if (id == 'pente') {
+    // Kapmalı Beşleme: arduvaz mavisi tahta, kehribar ve fildişi taşlar.
+    return const _WoodLook(Color(0xFF8FA6BC), Color(0xFF7A90A6), Color(0xFF233A54),
+        stones: [Color(0xFFE39B2D), Color(0xFFF4EEE2)]);
+  }
+  if (id == 'altili-bag') {
+    // Altılı Bağ: kiraz ağacı, yeşim ve gece mavisi taşlar.
+    return const _WoodLook(Color(0xFFC98E6A), Color(0xFFB57A57), Color(0xFF4A2414),
+        stones: [Color(0xFF1C2A44), Color(0xFF3DBB8E)]);
+  }
+  if (id == 'besleme') {
+    // Beşleme: açık bambu tahta, koyu yeşil çizgiler.
+    return const _WoodLook(Color(0xFFD9DFA6), Color(0xFFC8D08F), Color(0xFF3E5A22));
+  }
+  // Go (ve diğerleri): kaya ağacı rengi, yıldız noktaları.
+  return _WoodLook(const Color(0xFFDDB777), const Color(0xFFD2A965), const Color(0xFF6B4A22), hoshi: id == 'go');
+}
+
 class DiscSkin extends BoardSkin {
   final DiscBoard board;
   final List<Color> pieces;
   const DiscSkin(this.board, this.pieces);
+
+  List<Color> _pieces(BoardPaintInfo info) => board == DiscBoard.wood ? (_woodLook(info.gameId).stones ?? pieces) : pieces;
 
   @override
   double aspect(BoardState s) => (s as GridState).cols / s.rows;
@@ -155,9 +185,22 @@ class DiscSkin extends BoardSkin {
           c.drawLine(Offset(0, i * size.height / s.rows), Offset(size.width, i * size.height / s.rows), g);
         }
       case DiscBoard.wood:
-        c.drawRRect(whole, Paint()..color = const Color(0xFFDDB777));
+        final look = _woodLook(info.gameId);
+        c.drawRRect(whole, Paint()..color = look.board);
+        // Ahşap damarı: hafif dalgalı yatay çizgiler.
+        final grain = Paint()
+          ..color = look.grain
+          ..strokeWidth = 1.4
+          ..style = PaintingStyle.stroke;
+        for (var y = 6.0; y < size.height; y += 11) {
+          final path = Path()..moveTo(0, y);
+          for (var x = 0.0; x <= size.width; x += 24) {
+            path.quadraticBezierTo(x + 6, y + ((x ~/ 24).isEven ? 2.2 : -2.2), x + 12, y);
+          }
+          c.drawPath(path, grain);
+        }
         final g = Paint()
-          ..color = const Color(0xFF6B4A22)
+          ..color = look.line
           ..strokeWidth = 1;
         final ch = size.height / s.rows;
         for (var i = 0; i < s.cols; i++) {
@@ -166,7 +209,19 @@ class DiscSkin extends BoardSkin {
         for (var i = 0; i < s.rows; i++) {
           c.drawLine(Offset(cw / 2, (i + 0.5) * ch), Offset(size.width - cw / 2, (i + 0.5) * ch), g);
         }
+        if (look.hoshi && s.cols == s.rows && s.cols >= 9) {
+          final e = s.cols >= 13 ? 3 : 2;
+          final pts = s.cols >= 13 ? [e, s.cols ~/ 2, s.cols - 1 - e] : [e, s.cols - 1 - e];
+          final dot = Paint()..color = look.line;
+          for (final x in pts) {
+            for (final y in pts) {
+              c.drawCircle(Offset((x + 0.5) * cw, (y + 0.5) * ch), math.max(2.0, cw * 0.09), dot);
+            }
+          }
+          if (s.cols.isOdd && s.cols < 13) c.drawCircle(Offset((s.cols ~/ 2 + 0.5) * cw, (s.rows ~/ 2 + 0.5) * ch), math.max(2.0, cw * 0.09), dot);
+        }
     }
+    final pieces = _pieces(info);
     final targets = <int>{for (final t in info.targets) t};
     for (var i = 0; i < s.cells.length; i++) {
       final rect = _cell(s, size, i);
@@ -202,7 +257,7 @@ class DiscSkin extends BoardSkin {
 
   @override
   void paintSeat(Canvas c, Rect r, int seat, BoardPaintInfo info) {
-    drawDisc(c, r.center, r.width * 0.45, pieces[seat]);
+    drawDisc(c, r.center, r.width * 0.45, _pieces(info)[seat]);
     if (info.colorBlind) drawMark(c, r.center, r.width * 0.45, seat);
   }
 }
