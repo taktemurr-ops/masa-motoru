@@ -70,7 +70,31 @@ class _Rig {
   _Rig(this.t, this.gl, this.c, this.lang)
       : links = [for (var i = 0; i < t.matches.length; i++) t.link(i)],
         gen = List.filled(t.matches.length, 0),
-        results = List.filled(t.matches.length, null);
+        results = List.filled(t.matches.length, null) {
+    for (var i = 0; i < links.length; i++) {
+      watch(i);
+    }
+  }
+
+  /// Ekranı yeniden kurulacak istemciler (OnlineTable._resync'in aynısı:
+  /// hamlesi reddedilen cihaz masayı sunucudaki geçmişten yeniden kurar).
+  final Set<int> stale = {};
+  int resyncs = 0;
+
+  void watch(int i) {
+    final m = links[i]?.m;
+    m?.rejections.listen((_) async {
+      if (links[i]?.m != m) return;
+      final fresh = await t.backends[i].rejoin(t.matchId, ended: true);
+      if (fresh == null) return;
+      t.matches[i] = fresh;
+      links[i] = OnlineMatchLink(fresh);
+      gen[i]++;
+      resyncs++;
+      stale.add(i);
+      watch(i);
+    });
+  }
 
   Widget build() => MaterialApp(
         home: Directionality(
@@ -111,6 +135,10 @@ Future<void> _play(WidgetTester tester, _Rig rig, {int maxSeconds = 3600, Future
   while (!rig.done && ms < maxSeconds * 1000) {
     await tester.pump(const Duration(milliseconds: 250));
     ms += 250;
+    if (rig.stale.isNotEmpty) {
+      rig.stale.clear();
+      await tester.pumpWidget(rig.build());
+    }
     if (at != null && ms % 1000 == 0) await at(ms ~/ 1000);
   }
   expect(rig.done, isTrue, reason: '${rig.c.name}: maç ${maxSeconds}s içinde bitmedi (hamle: ${rig.t.moveCount})');
@@ -168,6 +196,7 @@ void main() {
         final l = await rig.t.resume(1);
         if (l != null) {
           rig.links[1] = l;
+          rig.watch(1);
           rig.gen[1]++;
           await tester.pumpWidget(rig.build());
         }
