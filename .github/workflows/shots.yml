@@ -1,0 +1,50 @@
+name: Shots (board games)
+on:
+  push:
+    branches: [masa-kimlik]
+permissions:
+  contents: read
+concurrency:
+  group: shots-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  shots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.9"
+          channel: stable
+          cache: true
+      - name: Fonts
+        run: sudo apt-get install -yq fonts-noto-core fonts-noto-cjk fonts-noto-color-emoji > /dev/null || (sudo apt-get update -q && sudo apt-get install -yq fonts-noto-core fonts-noto-cjk fonts-noto-color-emoji > /dev/null)
+      - run: flutter pub get
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos 2>&1 | tee analyze.log
+      - name: Shots
+        run: |
+          mkdir -p shots
+          SHOTS_DIR=$PWD/shots flutter test test/board_shots_test.dart --reporter expanded 2>&1 | tee shots/test.log
+      - name: Engine tests
+        if: always()
+        run: flutter test test/studio_chrome_test.dart test/board_test.dart --reporter expanded 2>&1 | tail -80 | tee shots/engine.log
+      - name: Compress
+        if: always()
+        run: |
+          cp analyze.log shots/ || true
+          sudo apt-get install -yq imagemagick > /dev/null 2>&1 || true
+          cd shots && for f in *.png; do [ -f "$f" ] && convert "$f" -resize '720x720>' -quality 72 "${f%.png}.jpg" && rm "$f"; done; ls | head -100
+      - name: Dump
+        if: always()
+        run: |
+          cd shots
+          cat log.txt || true
+          for f in *.jpg; do echo "@@SHOT $f $(base64 -w 0 "$f")"; done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shots
+          path: shots/
+          retention-days: 5
