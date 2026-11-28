@@ -288,6 +288,14 @@ class TavlaRules extends BoardRules<TavlaState> {
         } else if (variant == TavlaVariant.plakoto) {
           s.pins[t] = -sg;
           s.cells[t] = 0;
+          // Anne kuralı: rakibin başlangıç noktasındaki son pulu (hiç
+          // çıkmamış) sıkıştırılırsa oyun biter, sıkıştıran iki kat kazanır;
+          // sıkıştıranın kendi annesi de yerindeyse kural işlemez.
+          if (progress(t, 1 - p) == 0 && mine(s, pointAt(0, p), p) == 0) {
+            s.vars[0] = 1;
+            s.vars[6] = 2;
+            s.vars[7] = p;
+          }
         }
       }
       s.cells[t] += sg;
@@ -311,6 +319,19 @@ class TavlaRules extends BoardRules<TavlaState> {
     } else {
       _do(s, mvFrom(m), mvTo(m), mvExtra(m));
       s.last = mvTo(m);
+      if (isOver(s)) return; // Plakoto anne kuralı
+      if (variant == TavlaVariant.plakoto) s.pins[24] = 0;
+    }
+    if (variant == TavlaVariant.plakoto && m == kPass) {
+      // İki taraf da kilitlenirse (sıkışan pullar yüzünden kimse oynayamıyor)
+      // oyun sonsuza dek sürmesin: 12 boş tur sonra pip sayısı az olan kazanır.
+      s.pins[24]++;
+      if (s.pins[24] >= 12) {
+        s.vars[0] = 1;
+        s.vars[6] = 1;
+        s.vars[7] = pips(s, 0) <= pips(s, 1) ? 0 : 1;
+        return;
+      }
     }
     if (s.cells[p == 0 ? off0 : off1] >= checkers) {
       s.vars[0] = 1;

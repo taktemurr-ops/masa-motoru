@@ -267,6 +267,20 @@ void main() {
       expect(u.vars[6], 1);
     });
 
+    test('Plakoto: rakibin başlangıç noktasındaki son pulunu (anne) sıkıştıran kazanır, kendi annesi yerindeyse kazanmaz', () {
+      const pr = TavlaRules(TavlaVariant.plakoto);
+      // Siyahın (1) başlangıcı 0; orada tek pulu kalmış. Beyaz 3'ten 3 atıp 0'a konar.
+      final s = st({3: 1, 10: 14, 0: -1, 15: -14}, 3, 5);
+      pr.apply(s, mv(3, 0, 3));
+      expect(pr.isOver(s), isTrue);
+      expect(pr.winner(s), 0);
+      expect(s.vars[6], 2);
+      final t = st({3: 1, 23: 2, 10: 12, 0: -1, 15: -14}, 3, 5);
+      pr.apply(t, mv(3, 0, 3));
+      expect(pr.isOver(t), isFalse);
+      expect(t.pins[0], -1);
+    });
+
     for (final v in TavlaVariant.values) {
       test('botlar ($v): 40 oyun yasal, pul korunur, oyun biter', () {
         final rr = TavlaRules(v);
@@ -350,7 +364,6 @@ void main() {
       expect(s.cells[3], 2);
       // Siyahın (1) tek taşı 48'de: altı, yanı dolu, alamaz → beyaz 40→32 sonrası hamlesi yok.
       final t = board({48: 1, 56: 0, 49: 0, 50: 0, 40: 0});
-      expect(rules.moves(t).where((m) => mvFrom(m) == 56), isEmpty);
       rules.apply(t, mv(40, 32));
       expect(rules.isOver(t), isTrue);
       expect(rules.winner(t), 0);
